@@ -109,8 +109,8 @@ def convert_yolo_to_ls(
                 lines = file.readlines()
                 for line in lines:
                     line_split = line.split()
-                    label_id, coords = line_split[0], line_split[1:]
-                    x1, y1, x2, y2, x3, y3, x4, y4 = [float(x) * 100 for x in coords]
+                    label_id = line_split[0]
+                    x1, y1, x2, y2, x3, y3, x4, y4 = [float(x) * 100 for x in line_split[1:]]
                     width = distance(x1, y1, x2, y2)
                     height = distance(x3, y3, x4, y4)
                     if width == 0 or height == 0:
