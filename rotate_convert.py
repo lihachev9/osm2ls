@@ -60,7 +60,7 @@ class Affine:
         return new_points.round().astype('int32')
 
 
-def accumulate_cut(img, min_percent=2, max_percent=98):
+def accumulate_cut(img: np.ndarray, min_percent=2, max_percent=98) -> np.ndarray:
     lo, hi = np.percentile(img, (min_percent, max_percent))
     res_img = (img.astype(float) - lo) / (hi-lo)
 
@@ -69,7 +69,7 @@ def accumulate_cut(img, min_percent=2, max_percent=98):
     return res_img
 
 
-def find_box(coords):
+def find_box(coords) -> np.ndarray:
     coords = np.array(coords, 'int32').reshape(-1, 1, 2)
     rect = cv2.minAreaRect(coords)
     box = cv2.boxPoints(rect).astype('int32')
@@ -92,7 +92,7 @@ def get_annotations(geometry, transformer, affine_transform):
     return annotations
 
 
-def start_points(size, split_size, overlap=0):
+def start_points(size: int, split_size: int, overlap=0.0):
     points = [0]
     stride = int(split_size * (1-overlap))
     counter = 1
@@ -109,7 +109,7 @@ def start_points(size, split_size, overlap=0):
     return points
 
 
-def get_coords(obbox: Polygon):
+def get_coords(obbox: Polygon) -> np.ndarray:
     coords = np.array(obbox.exterior.coords[:-1])
     tolerance = 1
     while len(coords) > 4:
