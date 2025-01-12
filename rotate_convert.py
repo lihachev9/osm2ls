@@ -118,6 +118,35 @@ def get_coords(obbox: Polygon) -> np.ndarray:
     return coords
 
 
+def get_lines(annotations, left: int, top: int, target_w: int, target_h: int):
+    right = left + target_w
+    bottom = top + target_h
+    part_box = box(left, top, right, bottom)
+    lines = []
+    for obbox in annotations:
+        if part_box.intersects(obbox):
+            coords = np.array(obbox.exterior.coords[:-1])
+            # Получение координат нового obbox
+            coords[:, 0] = (coords[:, 0] - left) / target_w
+            coords[:, 1] = (coords[:, 1] - top) / target_h
+
+            # Проверка на выход за границы
+            if (0 > coords).any() or (coords > 1).any():
+                # Вычисление нового obbox
+                new_obbox: BaseGeometry = obbox.intersection(part_box)
+                if isinstance(new_obbox, Point) or isinstance(new_obbox, LineString):
+                    continue
+                coords = get_coords(new_obbox)
+                coords[:, 0] = (coords[:, 0] - left) / target_w
+                coords[:, 1] = (coords[:, 1] - top) / target_h
+            if len(coords) < 4:
+                continue
+
+            formatted_coords = [f"{coord:.6g}" for coord in coords.reshape(-1)]
+            lines.append(f"{0} {' '.join(formatted_coords)}\n")
+    return lines, right, bottom
+
+
 def split(img,
           annotations,
           part_name: str,
@@ -139,32 +168,9 @@ def split(img,
 
     for i, left in enumerate(X_points):
         for j, top in enumerate(Y_points):
-            right = left + target_w
-            bottom = top + target_h
-            part_box = box(left, top, right, bottom)
-            new_annotations = []
-            for obbox in annotations:
-                if part_box.intersects(obbox):
-                    coords = np.array(obbox.exterior.coords[:-1])
-                    # Получение координат нового obbox
-                    coords[:, 0] = (coords[:, 0] - left) / target_w
-                    coords[:, 1] = (coords[:, 1] - top) / target_h
-
-                    # Проверка на выход за границы
-                    if (0 > coords).any() or (coords > 1).any():
-                        # Вычисление нового obbox
-                        new_obbox: BaseGeometry = obbox.intersection(part_box)
-                        if isinstance(new_obbox, Point) or isinstance(new_obbox, LineString):
-                            continue
-                        coords = get_coords(new_obbox)
-                        coords[:, 0] = (coords[:, 0] - left) / target_w
-                        coords[:, 1] = (coords[:, 1] - top) / target_h
-                    if len(coords) < 4:
-                        continue
-
-                    formatted_coords = [f"{coord:.6g}" for coord in coords.reshape(-1)]
-                    new_annotations.append(f"{0} {' '.join(formatted_coords)}\n")
-
+            new_annotations, right, bottom = get_lines(annotations, left, top, target_w, target_h)
+            if new_annotations == []:
+                continue
             # Сохранение новых аннотаций
             annotation_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.txt"
             with open(os.path.join(label_dir, annotation_name), 'w') as f:
@@ -186,10 +192,13 @@ def get_args():
 
 if __name__=='__main__':
     args = get_args()
-    gdf = gpd.read_file(args.label)
     with rs.open(args.path) as src:
+        crs = src.crs
         img = src.read(1)
         transformer = AffineTransformer(src.transform)
+    gdf = gpd.read_file(args.label)
+    if gdf.crs != crs:
+        gdf = gdf.to_crs(crs)
     p = find_all_p(img)
     w = np.sqrt((p[1][0]-p[0][0])**2+(p[1][1]-p[0][1])**2)
     h = np.sqrt((p[2][0]-p[0][0])**2+(p[2][1]-p[0][1])**2)
