@@ -65,7 +65,7 @@ def accumulate_cut(img: np.ndarray, min_percent=2, max_percent=98) -> np.ndarray
     res_img = (img.astype(float) - lo) / (hi-lo)
 
     #Multiply by 255, clamp range to [0, 255] and convert to uint8
-    res_img = np.maximum(np.minimum(res_img*255, 255), 0).astype(np.uint8)
+    res_img = np.clip(res_img * 255, 0, 255).astype(np.uint8)
     return res_img
 
 
@@ -94,7 +94,7 @@ def get_annotations(geometry, transformer, affine_transform):
 
 def start_points(size: int, split_size: int, overlap=0.0):
     points = [0]
-    stride = int(split_size * (1-overlap))
+    stride = int(split_size * (1 - overlap))
     counter = 1
     while True:
         pt = stride * counter
@@ -118,9 +118,8 @@ def get_coords(obbox: Polygon) -> np.ndarray:
     return coords
 
 
-def get_lines(annotations, left: int, top: int, target_w: int, target_h: int):
-    right = left + target_w
-    bottom = top + target_h
+def get_lines(annotations, border_box, target_w: int, target_h: int):
+    left, top, right, bottom = border_box
     part_box = box(left, top, right, bottom)
     lines = []
     for obbox in annotations:
@@ -144,7 +143,7 @@ def get_lines(annotations, left: int, top: int, target_w: int, target_h: int):
 
             formatted_coords = [f"{coord:.6g}" for coord in coords.reshape(-1)]
             lines.append(f"{0} {' '.join(formatted_coords)}\n")
-    return lines, right, bottom
+    return lines
 
 
 def split(img,
@@ -168,7 +167,12 @@ def split(img,
 
     for i, left in enumerate(X_points):
         for j, top in enumerate(Y_points):
-            new_annotations, right, bottom = get_lines(annotations, left, top, target_w, target_h)
+            border_box = (left, top, left + target_w, top + target_h)
+            new_annotations = get_lines(annotations, border_box, target_w, target_h)
+
+            image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
+            img_pil.crop(border_box).save(os.path.join(images_dir, image_name))
+
             if new_annotations == []:
                 continue
             # Сохранение новых аннотаций
@@ -176,15 +180,14 @@ def split(img,
             with open(os.path.join(label_dir, annotation_name), 'w') as f:
                 f.writelines(new_annotations)
 
-            image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
-            img_pil.crop((left, top, right, bottom)).save(os.path.join(images_dir, image_name))
-
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', "--path", type=str, required=True)
-    parser.add_argument('-l', "--label", type=str, required=True)
+    parser.add_argument('-l', "--label", type=str)
     parser.add_argument('-o', "--output", type=str, default="")
+    parser.add_argument('--affine_transform', action='store_false')
+    parser.add_argument("--accumulate_cut", action="store_false")
     parser.add_argument("--parts_w", type=int, default=2)
     parser.add_argument("--parts_h", type=int, default=2)
     return parser.parse_args()
@@ -192,25 +195,43 @@ def get_args():
 
 if __name__=='__main__':
     args = get_args()
+    label = args.label
     with rs.open(args.path) as src:
         crs = src.crs
         img = src.read(1)
         transformer = AffineTransformer(src.transform)
-    gdf = gpd.read_file(args.label)
-    if gdf.crs != crs:
-        gdf = gdf.to_crs(crs)
-    p = find_all_p(img)
-    w = np.sqrt((p[1][0]-p[0][0])**2+(p[1][1]-p[0][1])**2)
-    h = np.sqrt((p[2][0]-p[0][0])**2+(p[2][1]-p[0][1])**2)
-    pad_h = abs(img.shape[0] - int(h))
-    img = np.pad(img, ((0, pad_h), (0, 0)), mode='constant', constant_values=0)
-    a = np.array([[(p[1][0]-p[0][0])/w, (p[2][0]-p[0][0])/h],
-                  [(p[1][1]-p[0][1])/w, (p[2][1]-p[0][1])/h]])
-    offset = p[0]
-    affine = Affine(a, offset)
+
+    if label:
+        gdf = gpd.read_file(label)
+        if gdf.crs != crs:
+            gdf = gdf.to_crs(crs)
+
+    if args.affine_transform:
+        p = find_all_p(img)
+        w = np.sqrt((p[1][0]-p[0][0])**2+(p[1][1]-p[0][1])**2)
+        h = np.sqrt((p[2][0]-p[0][0])**2+(p[2][1]-p[0][1])**2)
+        pad_h = abs(img.shape[0] - int(h))
+        img = np.pad(img, ((0, pad_h), (0, 0)), mode='constant', constant_values=0)
+        a = np.array([[(p[1][0]-p[0][0])/w, (p[2][0]-p[0][0])/h],
+                    [(p[1][1]-p[0][1])/w, (p[2][1]-p[0][1])/h]])
+        offset = p[0]
+        affine = Affine(a, offset)
+        img = affine.invert_affine_transform(img, h, w)
+    else:
+        a = np.array([[1, 0], [0, 1]])
+        offset = np.array([0, 0])
+        affine = Affine(a, offset)
+
     print('p =', p)
     print('a =', a)
-    img = affine.invert_affine_transform(img, h, w)
-    img = accumulate_cut(img)
-    annotations = get_annotations(gdf.geometry, transformer, affine.affine_transform)
+
+    if args.accumulate_cut:
+        img = accumulate_cut(img)
+    elif img.dtype != np.uint8:
+        img = np.minimum(img, 255).astype(np.uint8)
+
+    annotations = []
+    if label:
+        annotations = get_annotations(gdf.geometry, transformer, affine.affine_transform)
+
     split(img, annotations, args.path, args.parts_w, args.parts_h, args.output)
