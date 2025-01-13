@@ -2,4 +2,3 @@ imagesize
 rasterio
 geopandas
 opencv-python
-pillow

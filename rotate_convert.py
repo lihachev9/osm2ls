@@ -2,7 +2,6 @@ import argparse
 import os
 import cv2
 import numpy as np
-from PIL import Image
 import rasterio as rs
 import geopandas as gpd
 from rasterio.transform import AffineTransformer
@@ -158,8 +157,7 @@ def split(img,
     os.makedirs(label_dir, exist_ok=True)
     os.makedirs(images_dir, exist_ok=True)
     part_name = os.path.basename(part_name)
-    img_pil = Image.fromarray(img)
-    w, h = img_pil.size
+    w, h = img.shape
     target_w = int(w / parts_w + w % parts_w)
     target_h = int(h / parts_h + h % parts_h)
     X_points = start_points(w, target_w)
@@ -171,7 +169,8 @@ def split(img,
             new_annotations = get_lines(annotations, border_box, target_w, target_h)
 
             image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
-            img_pil.crop(border_box).save(os.path.join(images_dir, image_name))
+            crop_img = img[border_box[0]: border_box[2], border_box[1]: border_box[3]]
+            cv2.imwrite(image_name, crop_img, [cv2.IMWRITE_JPEG_QUALITY, 75])
 
             if new_annotations == []:
                 continue
