@@ -170,7 +170,7 @@ def split(img,
 
             image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
             image_path = os.path.join(images_dir, image_name)
-            crop_img = img[border_box[0]: border_box[2], border_box[1]: border_box[3]]
+            crop_img = img[border_box[1]: border_box[3], border_box[0]: border_box[2]]
             cv2.imwrite(image_path, crop_img, [cv2.IMWRITE_JPEG_QUALITY, 75])
 
             if new_annotations == []:
@@ -196,10 +196,13 @@ def get_args():
 if __name__=='__main__':
     args = get_args()
     label = args.label
-    with rs.open(args.path) as src:
-        crs = src.crs
-        img = src.read(1)
-        transformer = AffineTransformer(src.transform)
+    if args.path.endswith(".tif") or args.path.endswith(".tiff"):
+        with rs.open(args.path) as src:
+            crs = src.crs
+            img = src.read(1)
+            transformer = AffineTransformer(src.transform)
+    else:
+        img = cv2.imread(args.path, cv2.IMREAD_GRAYSCALE)
 
     if label:
         gdf = gpd.read_file(label)
@@ -208,19 +211,18 @@ if __name__=='__main__':
 
     if args.affine_transform:
         p = find_all_p(img)
-        w = np.sqrt((p[1][0]-p[0][0])**2+(p[1][1]-p[0][1])**2)
-        h = np.sqrt((p[2][0]-p[0][0])**2+(p[2][1]-p[0][1])**2)
-        pad_h = abs(img.shape[0] - int(h))
-        img = np.pad(img, ((0, pad_h), (0, 0)), mode='constant', constant_values=0)
-        a = np.array([[(p[1][0]-p[0][0])/w, (p[2][0]-p[0][0])/h],
-                    [(p[1][1]-p[0][1])/w, (p[2][1]-p[0][1])/h]])
-        offset = p[0]
-        affine = Affine(a, offset)
+        w = np.sqrt((p[1][0] - p[0][0])**2+(p[1][1] - p[0][1])**2)
+        h = np.sqrt((p[2][0] - p[0][0])**2+(p[2][1] - p[0][1])**2)
+        pad = img.shape[0] - img.shape[1]
+        img = np.pad(img, ((0, 0), (0, abs(pad)))) if pad > 0 else \
+              np.pad(img, ((0, abs(pad)), (0, 0))) if pad < 0 else img
+        a = np.array([[(p[1][0] - p[0][0]) / w, (p[2][0] - p[0][0]) / h],
+                      [(p[1][1] - p[0][1]) / w, (p[2][1] - p[0][1]) / h]])
+        affine = Affine(a, p[0])
         img = affine.invert_affine_transform(img, h, w)
     else:
         a = np.array([[1, 0], [0, 1]])
-        offset = np.array([0, 0])
-        affine = Affine(a, offset)
+        affine = Affine(a, np.array([0, 0]))
 
     print('p =', p)
     print('a =', a)
