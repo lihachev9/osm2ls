@@ -5,7 +5,6 @@ import numpy as np
 import rasterio as rs
 import geopandas as gpd
 from rasterio.transform import AffineTransformer
-from shapely.geometry.base import BaseGeometry
 from shapely.geometry import Polygon, box, Point, LineString
 
 
@@ -131,7 +130,7 @@ def get_lines(annotations, border_box, target_w: int, target_h: int):
             # Проверка на выход за границы
             if (0 > coords).any() or (coords > 1).any():
                 # Вычисление нового obbox
-                new_obbox: BaseGeometry = obbox.intersection(part_box)
+                new_obbox = obbox.intersection(part_box)
                 if isinstance(new_obbox, Point) or isinstance(new_obbox, LineString):
                     continue
                 coords = get_coords(new_obbox)
@@ -169,9 +168,9 @@ def img_split(img,
             new_annotations = get_lines(annotations, border_box, target_w, target_h)
 
             image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
-            image_path = os.path.join(images_dir, image_name)
-            crop_img = img[border_box[1]: border_box[3], border_box[0]: border_box[2]]
-            cv2.imwrite(image_path, crop_img, [cv2.IMWRITE_JPEG_QUALITY, 75])
+            cv2.imwrite(os.path.join(images_dir, image_name),
+                img[border_box[1]: border_box[3], border_box[0]: border_box[2]],
+                [cv2.IMWRITE_JPEG_QUALITY, 75])
 
             if new_annotations == []:
                 continue
@@ -211,8 +210,9 @@ if __name__=='__main__':
 
     if args.affine_transform:
         p = find_all_p(img)
-        w = np.sqrt((p[1][0] - p[0][0])**2+(p[1][1] - p[0][1])**2)
-        h = np.sqrt((p[2][0] - p[0][0])**2+(p[2][1] - p[0][1])**2)
+        print('p =', p)
+        w = np.sqrt((p[1][0] - p[0][0])**2 + (p[1][1] - p[0][1])**2)
+        h = np.sqrt((p[2][0] - p[0][0])**2 + (p[2][1] - p[0][1])**2)
         pad = img.shape[0] - img.shape[1]
         img = np.pad(img, ((0, 0), (0, abs(pad)))) if pad > 0 else \
               np.pad(img, ((0, abs(pad)), (0, 0))) if pad < 0 else img
@@ -224,7 +224,6 @@ if __name__=='__main__':
         a = np.array([[1, 0], [0, 1]])
         affine = Affine(a, np.array([0, 0]))
 
-    print('p =', p)
     print('a =', a)
 
     if args.accumulate_cut:
