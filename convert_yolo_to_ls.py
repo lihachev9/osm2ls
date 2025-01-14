@@ -112,7 +112,7 @@ def convert_yolo_to_ls(
                     label_id = line_split[0]
                     x1, y1, x2, y2, x3, y3, x4, y4 = [float(x) * 100 for x in line_split[1:]]
                     width = distance(x1, y1, x2, y2)
-                    height = distance(x3, y3, x4, y4)
+                    height = distance(x2, y2, x3, y3)
                     if width == 0 or height == 0:
                         continue
                     polygon = [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
