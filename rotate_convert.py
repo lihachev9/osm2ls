@@ -145,13 +145,13 @@ def get_lines(annotations, border_box, target_w: int, target_h: int):
     return lines
 
 
-def split(img,
-          annotations,
-          part_name: str,
-          parts_h=2, parts_w=2,
-          output_dir='',
-          images_dir='images',
-          label_dir='labels'):
+def img_split(img,
+        annotations,
+        part_name: str,
+        parts_h=2, parts_w=2,
+        output_dir='',
+        images_dir='images',
+        label_dir='labels'):
     images_dir = os.path.join(output_dir, images_dir)
     label_dir = os.path.join(output_dir, label_dir)
     os.makedirs(label_dir, exist_ok=True)
@@ -236,4 +236,4 @@ if __name__=='__main__':
     if label:
         annotations = get_annotations(gdf.geometry, transformer, affine.affine_transform)
 
-    split(img, annotations, args.path, args.parts_w, args.parts_h, args.output)
+    img_split(img, annotations, args.path, args.parts_w, args.parts_h, args.output)
