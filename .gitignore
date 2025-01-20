@@ -4,3 +4,8 @@ images/
 labels/
 classes.txt
 output.json
+*.tif
+*.geojson
+*.qmd
+*.xml
+*.jpg
