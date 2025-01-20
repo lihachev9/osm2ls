@@ -41,6 +41,7 @@ class Affine:
         self.a = a
         self.offset = offset
         self.a_inv = np.linalg.inv(a)
+        self.offset_inv = self.a_inv.dot(self.offset)
 
     def invert_affine_transform(self, src: np.ndarray, h: float, w: float) -> np.ndarray:
         M, N = src.shape
@@ -54,7 +55,7 @@ class Affine:
 
     def affine_transform(self, x: int, y: int):
         new_points  = self.a_inv.dot([x, y])
-        new_points -= self.a_inv.dot(self.offset)
+        new_points -= self.offset_inv
         return new_points.round().astype('int32')
 
 
@@ -162,8 +163,8 @@ def img_split(img,
     X_points = start_points(w, target_w)
     Y_points = start_points(h, target_h)
 
-    for i, left in enumerate(X_points):
-        for j, top in enumerate(Y_points):
+    for left in X_points:
+        for top in Y_points:
             border_box = (left, top, left + target_w, top + target_h)
             new_annotations = get_lines(annotations, border_box, target_w, target_h)
 
@@ -213,9 +214,12 @@ if __name__=='__main__':
         print('p =', p)
         w = np.sqrt((p[1][0] - p[0][0])**2 + (p[1][1] - p[0][1])**2)
         h = np.sqrt((p[2][0] - p[0][0])**2 + (p[2][1] - p[0][1])**2)
-        pad = img.shape[0] - img.shape[1]
-        img = np.pad(img, ((0, 0), (0, abs(pad)))) if pad > 0 else \
-              np.pad(img, ((0, abs(pad)), (0, 0))) if pad < 0 else img
+        pad_h = int(h) - img.shape[0]
+        pad_w = int(w) - img.shape[1]
+        if pad_h > 0:
+            img = np.pad(img, ((0, pad_h), (0, 0)))
+        if pad_w > 0:
+            img = np.pad(img, ((0, 0), (0, pad_w)))
         a = np.array([[(p[1][0] - p[0][0]) / w, (p[2][0] - p[0][0]) / h],
                       [(p[1][1] - p[0][1]) / w, (p[2][1] - p[0][1]) / h]])
         affine = Affine(a, p[0])
