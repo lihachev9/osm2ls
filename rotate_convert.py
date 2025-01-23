@@ -157,7 +157,7 @@ def img_split(img,
     os.makedirs(label_dir, exist_ok=True)
     os.makedirs(images_dir, exist_ok=True)
     part_name = os.path.basename(part_name)
-    h, w = img.shape
+    h, w = img.shape[:2]
     target_w = int(w / parts_w + w % parts_w)
     target_h = int(h / parts_h + h % parts_h)
     X_points = start_points(w, target_w)
@@ -199,7 +199,8 @@ if __name__=='__main__':
     if args.path.endswith(".tif") or args.path.endswith(".tiff"):
         with rs.open(args.path) as src:
             crs = src.crs
-            img = src.read(1)
+            img = src.read([3, 2, 1])
+            img = np.transpose(img, (1, 2, 0))
             transformer = AffineTransformer(src.transform)
     else:
         img = cv2.imread(args.path, cv2.IMREAD_GRAYSCALE)
