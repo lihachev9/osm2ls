@@ -1,11 +1,15 @@
 __pycache__/
 .venv/
 images/
-labels/
-classes.txt
+*.txt
 output.json
 *.tif
 *.geojson
 *.qmd
 *.xml
 *.jpg
+*.osm
+*.json
+*.cache
+*.qgz
+*.ipynb

@@ -168,7 +168,10 @@ def img_split(img,
             border_box = (left, top, left + target_w, top + target_h)
             new_annotations = get_lines(annotations, border_box, target_w, target_h)
 
-            image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
+            if len(X_points) == 1 and len(Y_points) == 1:
+                image_name = f"{os.path.splitext(part_name)[0]}.jpg"
+            else:
+                image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
             cv2.imwrite(os.path.join(images_dir, image_name),
                 img[border_box[1]: border_box[3], border_box[0]: border_box[2]],
                 [cv2.IMWRITE_JPEG_QUALITY, 75])
@@ -176,7 +179,7 @@ def img_split(img,
             if new_annotations == []:
                 continue
             # Сохранение новых аннотаций
-            annotation_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.txt"
+            annotation_name = image_name.replace(".jpg", ".txt")
             with open(os.path.join(label_dir, annotation_name), 'w') as f:
                 f.writelines(new_annotations)
 
