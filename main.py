@@ -1,5 +1,5 @@
 import argparse
-from imports import yolo as import_yolo, coco as import_coco
+from imports import yolo as import_yolo, coco as import_coco, segm as import_segm
 
 
 def imports(args):
@@ -13,7 +13,6 @@ def imports(args):
             image_root_url=args.image_root_url,
             image_ext=args.image_ext,
         )
-
     elif args.import_format == "coco":
         import_coco.convert_coco_to_ls(
             input_file=args.input,
@@ -22,7 +21,15 @@ def imports(args):
             from_name=args.from_name,
             out_type=args.out_type,
             image_root_url=args.image_root_url,
-            point_width=args.point_width,
+        )
+    elif args.import_format == "segm":
+        import_segm.convert_segm_to_ls(
+            input_file=args.input,
+            out_file=args.output,
+            to_name=args.to_name,
+            from_name=args.from_name,
+            out_type=args.out_type,
+            image_root_url=args.image_root_url
         )
     else:
         raise NotImplementedError()
