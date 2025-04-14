@@ -1,4 +1,3 @@
-import argparse
 import os
 import math
 import json  # better to use "imports ujson as json" for the best performance
@@ -12,19 +11,12 @@ from urllib.request import (
     pathname2url,
 )  # for converting "+","*", etc. in file paths to appropriate urls
 
-
-class ExpandFullPath(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
+from imports.utils import ExpandFullPath, distance
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("root")
 default_image_root_url = "/data/local-files/?d=images"
-
-
-def distance(x1: float, y1: float, x2: float, y2: float) -> float:
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
 def convert_yolo_to_ls(
@@ -227,32 +219,4 @@ def add_parser(subparsers):
             "if all your images are of dimensions width=600, height=800"
         ),
         default=None,
-    )
-
-
-def get_all_args():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    subparsers.required = False
-
-    # Import
-    parser_import = subparsers.add_parser(
-        "import",
-        help="Converter from external formats to Label Studio JSON annotations",
-    )
-    import_format = parser_import.add_subparsers(dest="import_format")
-    add_parser(import_format)
-
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = get_all_args()
-    convert_yolo_to_ls(
-        input_dir=args.input,
-        out_file=args.output,
-        to_name=args.to_name,
-        from_name=args.from_name,
-        out_type=args.out_type,
-        image_root_url=args.image_root_url
     )
