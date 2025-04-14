@@ -22,30 +22,6 @@ def new_task(out_type, root_url, file_name):
     }
 
 
-def create_bbox(annotation, categories, from_name, image_height, image_width, to_name):
-    label = categories[int(annotation["category_id"])]
-    x, y, width, height = annotation["bbox"]
-    x, y, width, height = float(x), float(y), float(width), float(height)
-    item = {
-        "id": uuid.uuid4().hex[0:10],
-        "type": "rectanglelabels",
-        "value": {
-            "x": x / image_width * 100.0,
-            "y": y / image_height * 100.0,
-            "width": width / image_width * 100.0,
-            "height": height / image_height * 100.0,
-            "rotation": 0,
-            "rectanglelabels": [label],
-        },
-        "to_name": to_name,
-        "from_name": from_name,
-        "image_rotation": 0,
-        "original_width": image_width,
-        "original_height": image_height,
-    }
-    return item
-
-
 def create_segmentation(
     category_id, segmentation, categories, from_name, image_height, image_width, to_name
 ):
@@ -121,10 +97,6 @@ def convert_coco_to_ls(
     # flags for labeling config composing
     segmentation = bbox = keypoints = rle = False
     segmentation_once = bbox_once = keypoints_once = rle_once = False
-    rectangles_from_name, keypoints_from_name = (
-        from_name + "_rectangles",
-        from_name + "_keypoints",
-    )
     segmentation_from_name = from_name + "polygons"
     tags = {}
 
@@ -142,18 +114,17 @@ def convert_coco_to_ls(
         )  # 0 - polygons are in segmentation, otherwise rle
 
         if rle and not rle_once:  # not supported
-            logger.error("RLE in segmentation is not yet supported in COCO")
+            logger.error("RLE in segmentation is not yet supported")
             rle_once = True
         if keypoints and not keypoints_once:
-            logger.warning("Keypoints are partially supported without skeletons")
-            tags.update({keypoints_from_name: "KeyPointLabels"})
+            logger.error("Keypoints is not yet supported")
             keypoints_once = True
         if segmentation and not segmentation_once:  # not supported
             logger.warning("Segmentation in COCO is experimental")
             tags.update({segmentation_from_name: "PolygonLabels"})
             segmentation_once = True
         if bbox and not bbox_once:
-            tags.update({rectangles_from_name: "RectangleLabels"})
+            logger.error("Bbox is not yet supported")
             bbox_once = True
 
         # read image sizes
@@ -166,17 +137,6 @@ def convert_coco_to_ls(
         )
 
         task = tasks[image_id]
-
-        if "bbox" in annotation:
-            item = create_bbox(
-                annotation,
-                categories,
-                rectangles_from_name,
-                image_height,
-                image_width,
-                to_name,
-            )
-            task[out_type][0]["result"].append(item)
 
         if "segmentation" in annotation and len(annotation["segmentation"]):
             for single_segmentation in annotation["segmentation"]:
