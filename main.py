@@ -48,6 +48,7 @@ def get_all_args():
     import_format = parser_import.add_subparsers(dest="import_format")
     import_yolo.add_parser(import_format)
     import_coco.add_parser(import_format)
+    import_segm.add_parser(import_format)
 
     return parser.parse_args()
 

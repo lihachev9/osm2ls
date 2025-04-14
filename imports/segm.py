@@ -1,9 +1,11 @@
 import os
 import json
+
+import logging
+
 from urllib.request import (
     pathname2url,
 )  # for converting "+","*", etc. in file paths to appropriate urls
-import logging
 
 from imports.brush import image2annotation
 from imports.utils import ExpandFullPath
