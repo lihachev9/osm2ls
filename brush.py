@@ -1,10 +1,7 @@
 import uuid
 import numpy as np
-import logging
 
 from PIL import Image
-
-logger = logging.getLogger(__name__)
 
 
 def bits2byte(arr_str, n=8):
