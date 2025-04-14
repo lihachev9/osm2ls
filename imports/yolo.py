@@ -6,7 +6,6 @@ import uuid
 import logging
 
 import imagesize
-from typing import Optional, Tuple
 from urllib.request import (
     pathname2url,
 )  # for converting "+","*", etc. in file paths to appropriate urls
@@ -27,7 +26,6 @@ def convert_yolo_to_ls(
     out_type="annotations",
     image_root_url=default_image_root_url,
     image_ext=".jpg,.jpeg,.png",
-    image_dims: Optional[Tuple[int, int]] = None,
 ):
     """Convert YOLO labeling to Label Studio JSON
     :param input_dir: directory with YOLO where images, labels, notes.json are located
@@ -92,10 +90,7 @@ def convert_yolo_to_ls(
             ]
 
             # read image sizes
-            if image_dims is None:
-                img_w, img_h = imagesize.get(os.path.join(images_dir, image_file))
-            else:
-                img_w, img_h = image_dims
+            img_w, img_h = imagesize.get(os.path.join(images_dir, image_file))
 
             with open(label_file) as file:
                 # convert all bounding boxes to Label Studio Results
@@ -205,18 +200,4 @@ def add_parser(subparsers):
         dest="image_ext",
         help="image extension to search: .jpeg or .jpg, .png",
         default=".jpg,jpeg,.png",
-    )
-    yolo.add_argument(
-        "--image-dims",
-        dest="image_dims",
-        type=int,
-        nargs=2,
-        help=(
-            "optional tuple of integers specifying the image width and height of *all* "
-            "images in the dataset. Defaults to opening the image to determine it's width "
-            "and height, which is slower. This should only be used in the special "
-            "case where you dataset has uniform image dimesions. e.g. `--image-dims 600 800` "
-            "if all your images are of dimensions width=600, height=800"
-        ),
-        default=None,
     )
