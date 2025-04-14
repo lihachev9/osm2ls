@@ -218,10 +218,3 @@ def add_parser(subparsers):
         help="root URL path where images will be hosted, e.g.: http://example.com/images",
         default="/data/local-files/?d=",
     )
-    coco.add_argument(
-        "--point-width",
-        dest="point_width",
-        help="key point width (size)",
-        default=1.0,
-        type=float,
-    )
