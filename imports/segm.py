@@ -14,6 +14,17 @@ def convert_segm_to_ls(
     image_root_url=default_image_root_url,
     image_ext=".jpg,.jpeg,.png",
 ):
+    """Convert Segmentation labeling to Label Studio JSON
+
+    :param input_dir: directory with Segmentation where images, labels
+    :param out_file: output file with Label Studio JSON tasks
+    :param to_name: object name from Label Studio labeling config
+    :param from_name: control tag name from Label Studio labeling config
+    :param out_type: annotation type - "annotations" or "predictions"
+    :param image_root_url: root URL path where images will be hosted, e.g.: http://example.com/images
+    :param image_ext: image extension/s - single string or comma separated list to search, eg. .jpeg or .jpg, .png and so on
+    """
+
     tasks = []
     logger.info("Reading Segmentation notes and labels from %s", input_dir)
 
