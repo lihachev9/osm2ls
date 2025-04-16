@@ -64,6 +64,7 @@ def convert_yolo_to_ls(
     image_ext=".jpg,.jpeg,.png",
 ):
     """Convert YOLO labeling to Label Studio JSON
+
     :param input_dir: directory with YOLO where images, labels, notes.json are located
     :param out_file: output file with Label Studio JSON tasks
     :param to_name: object name from Label Studio labeling config
@@ -71,7 +72,6 @@ def convert_yolo_to_ls(
     :param out_type: annotation type - "annotations" or "predictions"
     :param image_root_url: root URL path where images will be hosted, e.g.: http://example.com/images
     :param image_ext: image extension/s - single string or comma separated list to search, eg. .jpeg or .jpg, .png and so on.
-    :param image_dims: image dimensions - optional tuple of integers specifying the image width and height of *all* images in the dataset. Defaults to opening the image to determine it's width and height, which is slower. This should only be used in the special case where you dataset has uniform image dimesions.
     """
 
     tasks = []
