@@ -210,10 +210,7 @@ def image2annotation(
     path,
     label_name,
     from_name,
-    to_name,
-    ground_truth=False,
-    model_version=None,
-    score=None,
+    to_name
 ):
     """Convert image with mask to brush RLE annotation
 
@@ -222,36 +219,19 @@ def image2annotation(
     :param label_name: label name from labeling config (<Label>)
     :param from_name: brush tag name (<BrushLabels>)
     :param to_name: image tag name (<Image>)
-    :param ground_truth: ground truth annotation true/false
-    :param model_version: any string, only for predictions
-    :param score: model score as float, only for predictions
 
     :return: dict with Label Studio Annotation or Prediction (Pre-annotation)
     """
     rle, width, height = image2rle(path)
     result = {
-        "result": [
-            {
-                "id": str(uuid.uuid4())[0:8],
-                "type": "brushlabels",
-                "value": {"rle": rle, "format": "rle", "brushlabels": [label_name]},
-                "origin": "manual",
-                "to_name": to_name,
-                "from_name": from_name,
-                "image_rotation": 0,
-                "original_width": width,
-                "original_height": height,
-            }
-        ],
+        "id": str(uuid.uuid4())[0:8],
+        "type": "brushlabels",
+        "value": {"rle": rle, "format": "rle", "brushlabels": [label_name]},
+        "origin": "manual",
+        "to_name": to_name,
+        "from_name": from_name,
+        "image_rotation": 0,
+        "original_width": width,
+        "original_height": height,
     }
-
-    # prediction
-    if model_version:
-        result["model_version"] = model_version
-        result["score"] = score
-
-    # annotation
-    else:
-        result["ground_truth"] = ground_truth
-
     return result

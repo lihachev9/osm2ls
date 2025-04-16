@@ -72,7 +72,7 @@ def convert_segm_to_ls(
                 from_name=from_name,
                 to_name=to_name
             )
-            task[out_type][0]['result'].extend(annotation['result'])
+            task[out_type][0]['result'].append(annotation)
         tasks.append(task)
 
     if len(tasks) > 0:
