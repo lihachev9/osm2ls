@@ -1,18 +1,8 @@
 import os
 import json
 
-import logging
-
-from urllib.request import (
-    pathname2url,
-)  # for converting "+","*", etc. in file paths to appropriate urls
-
 from imports.brush import image2annotation
-from imports.utils import ExpandFullPath
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("root")
-default_image_root_url = "/data/local-files/?d=images"
+from imports.utils import defautl_parser, new_task, default_image_root_url, logger
 
 
 def convert_segm_to_ls(
@@ -50,19 +40,7 @@ def convert_segm_to_ls(
 
         image_root_url += "" if image_root_url.endswith("/") else "/"
 
-        task = {
-            "data": {
-                # eg. '../../foo+you.py' -> '../../foo%2Byou.py'
-                "image": image_root_url
-                + str(pathname2url(image_file))
-            }
-        }
-        task[out_type] = [
-            {
-                "result": [],
-                "ground_truth": False,
-            }
-        ]
+        task = new_task(out_type, image_root_url, image_file)
         label_dir = os.path.join(labels_dir, image_file_base)
         for i in os.listdir(label_dir):
             label_name = os.path.splitext(i)[0]
@@ -84,51 +62,9 @@ def convert_segm_to_ls(
 
 
 def add_parser(subparsers):
-    segm = subparsers.add_parser("segm")
-
-    segm.add_argument(
-        "-i",
-        "--input",
-        dest="input",
-        required=True,
-        help="directory with YOLO where images, labels, notes.json are located",
-        action=ExpandFullPath,
-    )
-    segm.add_argument(
-        "-o",
-        "--output",
-        dest="output",
-        help="output file with Label Studio JSON tasks",
-        default="output.json",
-        action=ExpandFullPath,
-    )
-    segm.add_argument(
-        "--to-name",
-        dest="to_name",
-        help="object name from Label Studio labeling config",
-        default="image",
-    )
-    segm.add_argument(
-        "--from-name",
-        dest="from_name",
-        help="control tag name from Label Studio labeling config",
-        default="tag",
-    )
-    segm.add_argument(
-        "--out-type",
-        dest="out_type",
-        help='annotation type - "annotations" or "predictions"',
-        default="annotations",
-    )
-    segm.add_argument(
-        "--image-root-url",
-        dest="image_root_url",
-        help="root URL path where images will be hosted, e.g.: http://example.com/images",
-        default=default_image_root_url,
-    )
-    segm.add_argument(
-        "--image-ext",
-        dest="image_ext",
-        help="image extension to search: .jpeg or .jpg, .png",
-        default=".jpg,jpeg,.png",
+    defautl_parser(
+        subparsers,
+        "segm",
+        "input segmentation directory with images, labels",
+        "tag"
     )

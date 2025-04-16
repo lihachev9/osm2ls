@@ -1,25 +1,8 @@
-import os
 import json  # better to use "imports ujson as json" for the best performance
 import uuid
-import logging
 
-from imports.utils import ExpandFullPath
+from imports.utils import defautl_parser, new_task, logger
 from imports.label_config import generate_label_config
-
-logger = logging.getLogger("root")
-
-
-def new_task(out_type, root_url, file_name):
-    return {
-        "data": {"image": os.path.join(root_url, file_name)},
-        # 'annotations' or 'predictions'
-        out_type: [
-            {
-                "result": [],
-                "ground_truth": False,
-            }
-        ],
-    }
 
 
 def create_segmentation(
@@ -176,45 +159,9 @@ def convert_coco_to_ls(
 
 
 def add_parser(subparsers):
-    coco = subparsers.add_parser("coco")
-
-    coco.add_argument(
-        "-i",
-        "--input",
-        dest="input",
-        required=True,
-        help="input COCO json file",
-        action=ExpandFullPath,
-    )
-    coco.add_argument(
-        "-o",
-        "--output",
-        dest="output",
-        help="output file with Label Studio JSON tasks",
-        default="output.json",
-        action=ExpandFullPath,
-    )
-    coco.add_argument(
-        "--to-name",
-        dest="to_name",
-        help="object name from Label Studio labeling config",
-        default="image",
-    )
-    coco.add_argument(
-        "--from-name",
-        dest="from_name",
-        help="control tag name from Label Studio labeling config",
-        default="label",
-    )
-    coco.add_argument(
-        "--out-type",
-        dest="out_type",
-        help='annotation type - "annotations" or "predictions"',
-        default="annotations",
-    )
-    coco.add_argument(
-        "--image-root-url",
-        dest="image_root_url",
-        help="root URL path where images will be hosted, e.g.: http://example.com/images",
-        default="/data/local-files/?d=",
+    defautl_parser(
+        subparsers,
+        "coco",
+        "input COCO json file",
+        "label"
     )

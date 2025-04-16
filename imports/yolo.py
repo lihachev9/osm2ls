@@ -1,21 +1,9 @@
 import os
 import math
 import json  # better to use "imports ujson as json" for the best performance
-
 import uuid
-import logging
-
 import imagesize
-from urllib.request import (
-    pathname2url,
-)  # for converting "+","*", etc. in file paths to appropriate urls
-
-from imports.utils import ExpandFullPath, distance
-
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("root")
-default_image_root_url = "/data/local-files/?d=images"
+from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
 
 
 def convert_yolo_to_ls(
@@ -70,25 +58,14 @@ def convert_yolo_to_ls(
             continue
 
         image_root_url += "" if image_root_url.endswith("/") else "/"
-        task = {
-            "data": {
-                # eg. '../../foo+you.py' -> '../../foo%2Byou.py'
-                "image": image_root_url
-                + str(pathname2url(image_file))
-            }
-        }
+        task = new_task(
+            out_type, image_root_url, image_file
+        )
 
         # define coresponding label file and check existence
         label_file = os.path.join(labels_dir, image_file_base + ".txt")
 
         if os.path.exists(label_file):
-            task[out_type] = [
-                {
-                    "result": [],
-                    "ground_truth": False,
-                }
-            ]
-
             # read image sizes
             img_w, img_h = imagesize.get(os.path.join(images_dir, image_file))
 
@@ -153,51 +130,9 @@ def convert_yolo_to_ls(
 
 
 def add_parser(subparsers):
-    yolo = subparsers.add_parser("yolo")
-
-    yolo.add_argument(
-        "-i",
-        "--input",
-        dest="input",
-        required=True,
-        help="directory with YOLO where images, labels, notes.json are located",
-        action=ExpandFullPath,
-    )
-    yolo.add_argument(
-        "-o",
-        "--output",
-        dest="output",
-        help="output file with Label Studio JSON tasks",
-        default="output.json",
-        action=ExpandFullPath,
-    )
-    yolo.add_argument(
-        "--to-name",
-        dest="to_name",
-        help="object name from Label Studio labeling config",
-        default="image",
-    )
-    yolo.add_argument(
-        "--from-name",
-        dest="from_name",
-        help="control tag name from Label Studio labeling config",
-        default="label",
-    )
-    yolo.add_argument(
-        "--out-type",
-        dest="out_type",
-        help='annotation type - "annotations" or "predictions"',
-        default="annotations",
-    )
-    yolo.add_argument(
-        "--image-root-url",
-        dest="image_root_url",
-        help="root URL path where images will be hosted, e.g.: http://example.com/images",
-        default=default_image_root_url,
-    )
-    yolo.add_argument(
-        "--image-ext",
-        dest="image_ext",
-        help="image extension to search: .jpeg or .jpg, .png",
-        default=".jpg,jpeg,.png",
+    defautl_parser(
+        subparsers,
+        "yolo",
+        "directory with YOLO where images, labels, notes.json are located",
+        "label"
     )
