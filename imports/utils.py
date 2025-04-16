@@ -62,9 +62,9 @@ def defautl_parser(subparsers, name, input_help, from_name):
     )
     parsers.add_argument(
         "--from-name",
-        dest=from_name,
+        dest='from_name',
         help="control tag name from Label Studio labeling config",
-        default="label",
+        default=from_name,
     )
     parsers.add_argument(
         "--out-type",
