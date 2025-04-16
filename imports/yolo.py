@@ -6,6 +6,54 @@ import imagesize
 from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
 
 
+def create_obb(line, categories, img_w, img_h, to_name, from_name):
+    values = line.split()
+    label_id = values[0]
+    (x1, y1), (x2, y2), (x3, y3), (x4, y4) = \
+        [(float(values[i]) * img_w, float(values[i + 1]) * img_h)
+        for i in range(1, len(values), 2)]
+    center_x = (x1 + x2 + x3 + x4) / 4
+    center_y = (y1 + y2 + y3 + y4) / 4
+    width = distance(x1, y1, x2, y2)
+    height = distance(x1, y1, x4, y4)
+    if width == 0 or height == 0:
+        return
+    dx = x2 - x1
+    dy = y2 - y1
+    rotation = math.degrees(math.atan2(dy, dx))
+
+    # Find the top-left corner (x, y)
+    radians = math.radians(rotation)
+    cos, sin = math.cos(radians), math.sin(radians)
+    height_2, width_2 = height / 2, width / 2
+    top_left_x = center_x - width_2 * cos + height_2 * sin
+    top_left_y = center_y - width_2 * sin - height_2 * cos
+
+    x = (top_left_x / img_w) * 100
+    y = (top_left_y / img_h) * 100
+    width = (width / img_w) * 100
+    height = (height / img_h) * 100
+
+    item = {
+        "id": uuid.uuid4().hex[0:10],
+        "type": "rectanglelabels",
+        "value": {
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height,
+            "rotation": rotation,
+            "rectanglelabels": [categories[int(label_id)]],
+        },
+        "to_name": to_name,
+        "from_name": from_name,
+        "image_rotation": 0,
+        "original_width": img_w,
+        "original_height": img_h,
+    }
+    return item
+
+
 def convert_yolo_to_ls(
     input_dir,
     out_file,
@@ -73,50 +121,11 @@ def convert_yolo_to_ls(
                 # convert all bounding boxes to Label Studio Results
                 lines = file.readlines()
                 for line in lines:
-                    values = line.split()
-                    label_id = values[0]
-                    (x1, y1), (x2, y2), (x3, y3), (x4, y4) = \
-                        [(float(values[i]) * img_w, float(values[i + 1]) * img_h)
-                        for i in range(1, len(values), 2)]
-                    center_x = (x1 + x2 + x3 + x4) / 4
-                    center_y = (y1 + y2 + y3 + y4) / 4
-                    width = distance(x1, y1, x2, y2)
-                    height = distance(x1, y1, x4, y4)
-                    if width == 0 or height == 0:
+                    item = create_obb(
+                        line, img_w, img_h, categories, to_name, from_name
+                    )
+                    if item is None:
                         continue
-                    dx = x2 - x1
-                    dy = y2 - y1
-                    rotation = math.degrees(math.atan2(dy, dx))
-
-                    # Find the top-left corner (x, y)
-                    radians = math.radians(rotation)
-                    cos, sin = math.cos(radians), math.sin(radians)
-                    height_2, width_2 = height / 2, width / 2
-                    top_left_x = center_x - width_2 * cos + height_2 * sin
-                    top_left_y = center_y - width_2 * sin - height_2 * cos
-
-                    x = (top_left_x / img_w) * 100
-                    y = (top_left_y / img_h) * 100
-                    width = (width / img_w) * 100
-                    height = (height / img_h) * 100
-
-                    item = {
-                        "id": uuid.uuid4().hex[0:10],
-                        "type": "rectanglelabels",
-                        "value": {
-                            "x": x,
-                            "y": y,
-                            "width": width,
-                            "height": height,
-                            "rotation": rotation,
-                            "rectanglelabels": [categories[int(label_id)]],
-                        },
-                        "to_name": to_name,
-                        "from_name": from_name,
-                        "image_rotation": 0,
-                        "original_width": img_w,
-                        "original_height": img_h,
-                    }
                     task[out_type][0]["result"].append(item)
 
         tasks.append(task)
