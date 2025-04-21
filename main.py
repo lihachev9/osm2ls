@@ -12,6 +12,7 @@ def imports(args):
             out_type=args.out_type,
             image_root_url=args.image_root_url,
             image_ext=args.image_ext,
+            task_type=args.task_type
         )
     elif args.import_format == "coco":
         import_coco.convert_coco_to_ls(
