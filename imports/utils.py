@@ -84,3 +84,5 @@ def defautl_parser(subparsers, name, input_help, from_name):
         help="image extension to search: .jpeg or .jpg, .png",
         default=".jpg,jpeg,.png",
     )
+
+    return parsers

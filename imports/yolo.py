@@ -8,10 +8,10 @@ from imports.utils import defautl_parser, distance, new_task, default_image_root
 
 def create_obb(line, categories, img_w, img_h, to_name, from_name):
     values = line.split()
-    label_id = values[0]
+    label = categories[int(values[0])]
     (x1, y1), (x2, y2), (x3, y3), (x4, y4) = \
         [(float(values[i]) * img_w, float(values[i + 1]) * img_h)
-        for i in range(1, len(values), 2)]
+         for i in range(1, len(values), 2)]
     center_x = (x1 + x2 + x3 + x4) / 4
     center_y = (y1 + y2 + y3 + y4) / 4
     width = distance(x1, y1, x2, y2)
@@ -43,8 +43,29 @@ def create_obb(line, categories, img_w, img_h, to_name, from_name):
             "width": width,
             "height": height,
             "rotation": rotation,
-            "rectanglelabels": [categories[int(label_id)]],
+            "rectanglelabels": [label],
         },
+        "to_name": to_name,
+        "from_name": from_name,
+        "image_rotation": 0,
+        "original_width": img_w,
+        "original_height": img_h,
+    }
+    return item
+
+
+def create_segmentation(
+    line, categories, from_name, img_w, img_h, to_name
+):
+    values = line.split()
+    label = categories[int(values[0])]
+    points = [(float(values[i]) * 100.0, float(values[i + 1]) * 100.0)
+              for i in range(1, len(values), 2)]
+
+    item = {
+        "id": uuid.uuid4().hex[0:10],
+        "type": "polygonlabels",
+        "value": {"points": points, "polygonlabels": [label]},
         "to_name": to_name,
         "from_name": from_name,
         "image_rotation": 0,
@@ -62,6 +83,7 @@ def convert_yolo_to_ls(
     out_type="annotations",
     image_root_url=default_image_root_url,
     image_ext=".jpg,.jpeg,.png",
+    task_type="obb",
 ):
     """Convert YOLO labeling to Label Studio JSON
 
@@ -72,9 +94,14 @@ def convert_yolo_to_ls(
     :param out_type: annotation type - "annotations" or "predictions"
     :param image_root_url: root URL path where images will be hosted, e.g.: http://example.com/images
     :param image_ext: image extension/s - single string or comma separated list to search, eg. .jpeg or .jpg, .png and so on.
+    :param task_type: task type - "obb" or "segmentation"
     """
 
     tasks = []
+    task_fn = {
+        "obb": create_obb,
+        "segmentation": create_segmentation
+    }[task_type]
     logger.info("Reading YOLO notes and categories from %s", input_dir)
 
     # build categories=>labels dict
@@ -121,7 +148,7 @@ def convert_yolo_to_ls(
                 # convert all bounding boxes to Label Studio Results
                 lines = file.readlines()
                 for line in lines:
-                    item = create_obb(
+                    item = task_fn(
                         line, img_w, img_h, categories, to_name, from_name
                     )
                     if item is None:
@@ -139,9 +166,10 @@ def convert_yolo_to_ls(
 
 
 def add_parser(subparsers):
-    defautl_parser(
+    parsers = defautl_parser(
         subparsers,
         "yolo",
         "directory with YOLO where images, labels, notes.json are located",
         "label"
     )
+    parsers.add_argument("--task_type", type=str, default="obb", choices=["obb", "segmentation"])
