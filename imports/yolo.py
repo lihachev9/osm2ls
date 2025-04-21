@@ -6,9 +6,7 @@ import imagesize
 from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
 
 
-def create_obb(line, categories, img_w, img_h, to_name, from_name):
-    values = line.split()
-    label = categories[int(values[0])]
+def convert_rectanglelabels(values, label, img_w, img_h):
     (x1, y1), (x2, y2), (x3, y3), (x4, y4) = \
         [(float(values[i]) * img_w, float(values[i + 1]) * img_h)
          for i in range(1, len(values), 2)]
@@ -34,45 +32,23 @@ def create_obb(line, categories, img_w, img_h, to_name, from_name):
     width = (width / img_w) * 100
     height = (height / img_h) * 100
 
-    item = {
-        "id": uuid.uuid4().hex[0:10],
-        "type": "rectanglelabels",
-        "value": {
-            "x": x,
-            "y": y,
-            "width": width,
-            "height": height,
-            "rotation": rotation,
-            "rectanglelabels": [label],
-        },
-        "to_name": to_name,
-        "from_name": from_name,
-        "image_rotation": 0,
-        "original_width": img_w,
-        "original_height": img_h,
+    return {
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
+        "rotation": rotation,
+        "rectanglelabels": [label],
     }
-    return item
 
 
-def create_segmentation(
-    line, categories, from_name, img_w, img_h, to_name
+def convert_polygonlabels(
+    values, label, img_w=None, img_h=None
 ):
-    values = line.split()
-    label = categories[int(values[0])]
-    points = [(float(values[i]) * 100.0, float(values[i + 1]) * 100.0)
+    points = [(float(values[i]) * 100, float(values[i + 1]) * 100)
               for i in range(1, len(values), 2)]
 
-    item = {
-        "id": uuid.uuid4().hex[0:10],
-        "type": "polygonlabels",
-        "value": {"points": points, "polygonlabels": [label]},
-        "to_name": to_name,
-        "from_name": from_name,
-        "image_rotation": 0,
-        "original_width": img_w,
-        "original_height": img_h,
-    }
-    return item
+    return {"points": points, "polygonlabels": [label]}
 
 
 def convert_yolo_to_ls(
@@ -83,7 +59,7 @@ def convert_yolo_to_ls(
     out_type="annotations",
     image_root_url=default_image_root_url,
     image_ext=".jpg,.jpeg,.png",
-    task_type="obb",
+    task_type="rectanglelabels",
 ):
     """Convert YOLO labeling to Label Studio JSON
 
@@ -94,13 +70,13 @@ def convert_yolo_to_ls(
     :param out_type: annotation type - "annotations" or "predictions"
     :param image_root_url: root URL path where images will be hosted, e.g.: http://example.com/images
     :param image_ext: image extension/s - single string or comma separated list to search, eg. .jpeg or .jpg, .png and so on.
-    :param task_type: task type - "obb" or "segmentation"
+    :param task_type: task type - "rectanglelabels" or "polygonlabels"
     """
 
     tasks = []
     task_fn = {
-        "obb": create_obb,
-        "segmentation": create_segmentation
+        "rectanglelabels": convert_rectanglelabels,
+        "polygonlabels": convert_polygonlabels
     }[task_type]
     logger.info("Reading YOLO notes and categories from %s", input_dir)
 
@@ -148,11 +124,23 @@ def convert_yolo_to_ls(
                 # convert all bounding boxes to Label Studio Results
                 lines = file.readlines()
                 for line in lines:
-                    item = task_fn(
-                        line, img_w, img_h, categories, to_name, from_name
+                    values = line.split()
+                    label = categories[int(values[0])]
+                    value = task_fn(
+                        values, label, img_w, img_h
                     )
-                    if item is None:
+                    if value is None:
                         continue
+                    item = {
+                        "id": uuid.uuid4().hex[0:10],
+                        "type": task_type,
+                        "value": value,
+                        "to_name": to_name,
+                        "from_name": from_name,
+                        "image_rotation": 0,
+                        "original_width": img_w,
+                        "original_height": img_h,
+                    }
                     task[out_type][0]["result"].append(item)
 
         tasks.append(task)
@@ -172,4 +160,9 @@ def add_parser(subparsers):
         "directory with YOLO where images, labels, notes.json are located",
         "label"
     )
-    parsers.add_argument("--task_type", type=str, default="obb", choices=["obb", "segmentation"])
+    parsers.add_argument(
+        "--task_type",
+        type=str,
+        default="rectanglelabels",
+        choices=["rectanglelabels", "polygonlabels"]
+    )
