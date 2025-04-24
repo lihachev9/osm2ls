@@ -200,10 +200,41 @@ def image2rle(path):
     """
     with Image.open(path).convert("L") as image:
         mask = np.array((np.array(image) > 128) * 255, dtype=np.uint8)
-        array = mask.ravel()
-        array = np.repeat(array, 4)
-        rle = encode_rle(array)
+        rle = mask2rle(mask)
         return rle, image.size[0], image.size[1]
+
+
+def create_result(
+    rle,
+    label_name,
+    to_name,
+    from_name,
+    width,
+    height
+):
+    result = {
+        "id": str(uuid.uuid4())[0:8],
+        "type": "brushlabels",
+        "value": {"rle": rle, "format": "rle", "brushlabels": [label_name]},
+        "origin": "manual",
+        "to_name": to_name,
+        "from_name": from_name,
+        "image_rotation": 0,
+        "original_width": width,
+        "original_height": height,
+    }
+    return result
+
+
+def mask2annotation(
+    mask,
+    label_name,
+    from_name,
+    to_name
+):
+    height, width = mask.shape
+    rle = mask2rle(mask)
+    return create_result(rle, label_name, to_name, from_name, width, height)
 
 
 def image2annotation(
@@ -223,15 +254,4 @@ def image2annotation(
     :return: dict with Label Studio Annotation or Prediction (Pre-annotation)
     """
     rle, width, height = image2rle(path)
-    result = {
-        "id": str(uuid.uuid4())[0:8],
-        "type": "brushlabels",
-        "value": {"rle": rle, "format": "rle", "brushlabels": [label_name]},
-        "origin": "manual",
-        "to_name": to_name,
-        "from_name": from_name,
-        "image_rotation": 0,
-        "original_width": width,
-        "original_height": height,
-    }
-    return result
+    return create_result(rle, label_name, to_name, from_name, width, height)
