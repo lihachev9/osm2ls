@@ -18,6 +18,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', "--path", type=str, required=True)
     parser.add_argument('-l', "--label", type=str)
+    parser.add_argument('--default_image_root_url', type=str, default='/data/local-files/?d=3b')
+    parser.add_argument('--out_type', type=str, default='annotations')
     parser.add_argument("--save_geojson", action='store_true')
     parser.add_argument("--save_png", action='store_true')
     return parser.parse_args()
@@ -27,6 +29,21 @@ def get_label_id(label):
     for i, x in label2id.items():
         if i in label:
             return x
+
+
+def delete_labels(labels):
+    # Удалить из поля леса
+    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[0]), labels[2])
+    # Удалить из поля кустарники
+    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[1]), labels[2])
+    # Удалить из поля строения
+    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[4]), labels[2])
+    # Удалить из леса вырубку
+    labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[5]), labels[0])
+    # Удалить из леса заболоченные
+    labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[6]), labels[0])
+    # Удалить из заболоченного воду
+    labels[6] = cv2.bitwise_and(cv2.bitwise_not(labels[3]), labels[6])
 
 
 if __name__ == '__main__':
@@ -53,7 +70,6 @@ if __name__ == '__main__':
         5: 'вырубка',
         6: 'заболоченный'
     }
-    default_image_root_url = "/data/local-files/?d=3b"
     geojson = glob(args.label + '/*.geojson')
 
     for tiff_path in glob(args.path + '/*.tif'):
@@ -117,22 +133,16 @@ if __name__ == '__main__':
                 file = to_folder + '/' + tail
                 clipped_gdf.to_file(file, driver='GeoJSON')
 
-        labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[0]), labels[2])
-        labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[1]), labels[2])
-        labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[4]), labels[2])
-        labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[5]), labels[0])
-        labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[6]), labels[0])
-        labels[6] = cv2.bitwise_and(cv2.bitwise_not(labels[3]), labels[6])
+        delete_labels(labels)
 
         jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
         if not os.path.exists(jpg_file):
             cv2.imwrite(jpg_file, cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE))
-        image_root_url=default_image_root_url
+        image_root_url=args.default_image_root_url
         image_root_url += "" if image_root_url.endswith("/") else "/"
 
-        out_type = "annotations"
         jpg_file = os.path.split(jpg_file)[-1]
-        task = new_task(out_type, image_root_url, jpg_file)
+        task = new_task(args.out_type, image_root_url, jpg_file)
         for i, mask in enumerate(labels):
             if set(np.unique(mask)) == {0}:
                 continue
@@ -146,7 +156,7 @@ if __name__ == '__main__':
                 from_name='tag',
                 to_name='image'
             )
-            task[out_type][0]['result'].append(annotation)
+            task[args.out_type][0]['result'].append(annotation)
 
         tasks = [task]
         with open(json_path, "w") as f:
