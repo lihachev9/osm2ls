@@ -17,8 +17,8 @@ from imports.utils import new_task
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', "--path", type=str, required=True)
-    parser.add_argument('-l', "--label", type=str)
-    parser.add_argument('--default_image_root_url', type=str, default='/data/local-files/?d=3b')
+    parser.add_argument('-l', "--label", type=str, required=True)
+    parser.add_argument('--default_image_root_url', type=str, default='4_3')
     parser.add_argument('--out_type', type=str, default='annotations')
     parser.add_argument("--save_geojson", action='store_true')
     parser.add_argument("--save_png", action='store_true')
@@ -44,31 +44,35 @@ def delete_labels(labels):
     labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[6]), labels[0])
     # Удалить из заболоченного воду
     labels[6] = cv2.bitwise_and(cv2.bitwise_not(labels[3]), labels[6])
+    # Удалить из с/х лес
+    labels[7] = cv2.bitwise_and(cv2.bitwise_not(labels[7]), labels[2])
 
 
 if __name__ == '__main__':
     args = get_args()
     label2id = {
         'tree_row': 0,
+        'tree_group': 0,
         'wood': 0,
         'scrub': 1,
         'heath': 2,
         'grassland': 2,
         'natural_gully': 2,
-        'landuse_farmland': 2,
         'water': 3,
         'building': 4,
         'landuse_forest': 5,
-        'wetland': 6
+        'wetland': 6,
+        'landuse_farmland': 7,
     }
     id2label = {
-        0: 'лес',
-        1: 'кустарники',
-        2: 'поле',
-        3: 'вода',
+        0: 'Лес',
+        1: 'кустарник',
+        2: 'Поле',
+        3: 'Вода',
         4: 'строения',
         5: 'вырубка',
-        6: 'заболоченный'
+        6: 'заболоченный',
+        7: "сельскохозяйственные"
     }
     geojson = glob(args.label + '/*.geojson')
 
@@ -86,11 +90,11 @@ if __name__ == '__main__':
         h, w = img.shape
         _, thresh = cv2.threshold(img, 127, 255, 0)
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        new_p = [transformer.xy(x[1], x[0]) for x in contours[0].reshape(-1, 2)]
+        cnt = max(contours, key=lambda x: cv2.contourArea(x))
+        new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
         tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
-        labels = np.zeros((7, h, w), dtype=np.uint8)
+        labels = np.zeros((8, h, w), dtype=np.uint8)
 
         for file in geojson:
             gdf = gpd.read_file(file)
@@ -138,10 +142,11 @@ if __name__ == '__main__':
         jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
         if not os.path.exists(jpg_file):
             cv2.imwrite(jpg_file, cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE))
-        image_root_url=args.default_image_root_url
+        image_root_url= '/data/local-files/?d=' + args.default_image_root_url
         image_root_url += "" if image_root_url.endswith("/") else "/"
 
-        jpg_file = os.path.split(jpg_file)[-1]
+        head, _ = os.path.splitext(jpg_file)
+        jpg_file = os.path.basename(jpg_file)
         task = new_task(args.out_type, image_root_url, jpg_file)
         for i, mask in enumerate(labels):
             if set(np.unique(mask)) == {0}:

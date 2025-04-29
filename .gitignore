@@ -13,3 +13,4 @@ output.json
 *.cache
 *.qgz
 *.ipynb
+*.png
