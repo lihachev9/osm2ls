@@ -232,8 +232,8 @@ def mask2annotation(
     from_name,
     to_name
 ):
-    height, width = mask.shape
     rle = mask2rle(mask)
+    height, width = mask.shape
     return create_result(rle, label_name, to_name, from_name, width, height)
 
 
