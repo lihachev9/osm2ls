@@ -3,6 +3,7 @@ import math
 import json  # better to use "imports ujson as json" for the best performance
 import uuid
 import imagesize
+from imports.label_config import generate_label_config
 from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
 
 
@@ -91,6 +92,16 @@ def convert_yolo_to_ls(
     labels_dir = os.path.join(input_dir, "labels")
     images_dir = os.path.join(input_dir, "images")
     logger.info("Converting labels from %s", labels_dir)
+
+    # generate and save labeling config
+    label_config_file = out_file.replace('.json', '') + '.label_config.xml'
+    generate_label_config(
+        categories,
+        {from_name: task_type},
+        to_name,
+        from_name,
+        label_config_file,
+    )
 
     # build array out of provided comma separated image_extns (str -> array)
     image_ext = [x.strip() for x in image_ext.split(",")]
