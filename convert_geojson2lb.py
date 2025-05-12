@@ -53,15 +53,22 @@ if __name__ == '__main__':
         'tree_row': 0,
         'tree_group': 0,
         'wood': 0,
+        'Лес': 0,
         'scrub': 1,
+        'кустарник': 1,
         'heath': 2,
         'grassland': 2,
+        'Луг, поле': 2,
         'natural_gully': 2,
         'water': 3,
         'building': 4,
+        'строения': 4,
         'landuse_forest': 5,
         'wetland': 6,
         'landuse_farmland': 7,
+        'сельхоз': 7,
+        'территория фермы': 7,
+        'Заболоченный луг': 8
     }
     id2label = {
         0: 'Лес',
@@ -71,7 +78,8 @@ if __name__ == '__main__':
         4: 'строения',
         5: 'вырубка',
         6: 'заболоченный',
-        7: "сельскохозяйственные"
+        7: "сельскохозяйственные",
+        8: "Заболоченный луг"
     }
     geojson = glob(args.label + '/*.geojson')
 
@@ -93,7 +101,7 @@ if __name__ == '__main__':
         new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
         tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
-        labels = np.zeros((8, h, w), dtype=np.uint8)
+        labels = np.zeros((9, h, w), dtype=np.uint8)
 
         for file in geojson:
             gdf = gpd.read_file(file)
