@@ -43,8 +43,8 @@ def delete_labels(labels):
     labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[6]), labels[0])
     # Удалить из заболоченного воду
     labels[6] = cv2.bitwise_and(cv2.bitwise_not(labels[3]), labels[6])
-    # Удалить из с/х лес
-    labels[7] = cv2.bitwise_and(cv2.bitwise_not(labels[7]), labels[2])
+    # Удалить Поле из с/х
+    labels[7] = cv2.bitwise_and(cv2.bitwise_not(labels[2]), labels[7])
 
 
 if __name__ == '__main__':
@@ -142,6 +142,7 @@ if __name__ == '__main__':
                 to_folder = head + '/' + folder
                 os.makedirs(to_folder, exist_ok=True)
                 file = to_folder + '/' + tail
+                print(file)
                 clipped_gdf.to_file(file, driver='GeoJSON')
 
         delete_labels(labels)
