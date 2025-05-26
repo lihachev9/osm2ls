@@ -30,6 +30,14 @@ def get_label_id(label):
             return x
 
 
+def get_coords(poly: Polygon, transformer: AffineTransformer):
+    new_coords = []
+    for x, y in poly.exterior.coords[:-1]:
+        y, x = transformer.rowcol(x, y)
+        new_coords.append([x, y])
+    return np.array(new_coords, np.int32)
+
+
 def delete_labels(labels):
     # Удалить из поля леса
     labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[0]), labels[2])
@@ -60,13 +68,18 @@ if __name__ == '__main__':
         'grassland': 2,
         'Луг, поле': 2,
         'natural_gully': 2,
+        'Поле': 2,
         'water': 3,
+        'Вода': 3,
         'building': 4,
         'строения': 4,
         'landuse_forest': 5,
+        'вырубка': 5,
         'wetland': 6,
+        'заболоченный': 6,
         'landuse_farmland': 7,
         'сельхоз': 7,
+        'сельскохозяйственные': 7,
         'территория фермы': 7,
         'Заболоченный луг': 8
     }
@@ -129,11 +142,7 @@ if __name__ == '__main__':
             label_id = get_label_id(file)
             for geom in clipped_gdf.geometry:
                 if isinstance(geom, Polygon):
-                    coords = []
-                    for x in geom.exterior.coords[:-1]:
-                        x, y = transformer.rowcol(x[0], x[1])
-                        coords.append([y, x])
-                    cv2.fillPoly(labels[label_id], [np.array(coords, 'int64')], (255))
+                    cv2.fillPoly(labels[label_id], [get_coords(geom, transformer)], (255))
 
             if args.save_geojson:
                 if gdf_crs != crs:
