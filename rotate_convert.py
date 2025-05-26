@@ -75,14 +75,14 @@ def find_box(coords) -> np.ndarray:
     return box
 
 
-def get_annotations(geometry, transformer, affine_transform):
+def get_annotations(geometry, transformer: AffineTransformer, affine: Affine):
     annotations = []
     for item in geometry:
         coords = []
         for poly in item.geoms:
             for x, y in poly.exterior.coords[:-1]:
                 y, x = transformer.rowcol(x, y)
-                x, y = affine_transform(x, y)
+                x, y = affine.affine_transform(x, y)
                 coords.append((x, y))
         if coords == []:
             continue
@@ -241,6 +241,6 @@ if __name__=='__main__':
 
     annotations = []
     if label:
-        annotations = get_annotations(gdf.geometry, transformer, affine.affine_transform)
+        annotations = get_annotations(gdf.geometry, transformer, affine)
 
     img_split(img, annotations, args.path, args.parts_w, args.parts_h, args.output)
