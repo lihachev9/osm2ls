@@ -36,29 +36,6 @@ def find_all_p(img: np.ndarray):
     return find_p0(img), find_p1(img), find_p2(img)
 
 
-class Affine:
-    def __init__(self, a, offset):
-        self.a = a
-        self.offset = offset
-        self.a_inv = np.linalg.inv(a)
-        self.offset_inv = self.a_inv.dot(self.offset)
-
-    def invert_affine_transform(self, src: np.ndarray, h: float, w: float) -> np.ndarray:
-        M, N = src.shape
-        points = np.mgrid[0:np.uint16(N), 0:np.uint16(M)].reshape((2, M*N))
-        new_points = self.a.dot(points).round().astype('int32')
-        new_points[0] += self.offset[0]
-        new_points[1] += self.offset[1]
-        x, y = new_points.reshape((2, M, N), order='F')
-        indices = x + N * y
-        return np.take(src, indices, mode='wrap')[:int(h) + 1, :int(w) + 1]
-
-    def affine_transform(self, x: int, y: int):
-        new_points  = self.a_inv.dot([x, y])
-        new_points -= self.offset_inv
-        return new_points.round().astype('int32')
-
-
 def accumulate_cut(img: np.ndarray, min_percent=2, max_percent=98) -> np.ndarray:
     lo, hi = np.percentile(img, (min_percent, max_percent))
     res_img = (img.astype(float) - lo) / (hi-lo)
@@ -75,14 +52,14 @@ def find_box(coords) -> np.ndarray:
     return box
 
 
-def get_annotations(geometry, transformer: AffineTransformer, affine: Affine):
+def get_annotations(geometry, transformer: AffineTransformer, affine: ImageRectifier):
     annotations = []
     for item in geometry:
         coords = []
         for poly in item.geoms:
             for x, y in poly.exterior.coords[:-1]:
                 y, x = transformer.rowcol(x, y)
-                x, y = affine.affine_transform(x, y)
+                x, y = affine.inverse_transform(x, y)
                 coords.append((x, y))
         if coords == []:
             continue
@@ -226,11 +203,11 @@ if __name__=='__main__':
             img = np.pad(img, ((0, 0), (0, pad_w)))
         a = np.array([[(p[1][0] - p[0][0]) / w, (p[2][0] - p[0][0]) / h],
                       [(p[1][1] - p[0][1]) / w, (p[2][1] - p[0][1]) / h]])
-        affine = Affine(a, p[0])
-        img = affine.invert_affine_transform(img, h, w)
+        affine = ImageRectifier(a, p[0])
+        img = affine.apply_transform(img, h, w)
     else:
         a = np.array([[1, 0], [0, 1]])
-        affine = Affine(a, np.array([0, 0]))
+        affine = ImageRectifier(a, np.array([0, 0]))
 
     print('a =', a)
 
