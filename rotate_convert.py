@@ -6,6 +6,7 @@ import rasterio as rs
 import geopandas as gpd
 from rasterio.transform import AffineTransformer
 from shapely.geometry import Polygon, box, Point, LineString
+from imagerectifer import ImageRectifier
 
 
 def find_p0(img: np.ndarray):
