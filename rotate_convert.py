@@ -41,7 +41,7 @@ def accumulate_cut(img: np.ndarray, min_percent=2, max_percent=98) -> np.ndarray
     lo, hi = np.percentile(img, (min_percent, max_percent))
     res_img = (img.astype(float) - lo) / (hi-lo)
 
-    #Multiply by 255, clamp range to [0, 255] and convert to uint8
+    # Multiply by 255, clamp range to [0, 255] and convert to uint8
     res_img = np.clip(res_img * 255, 0, 255).astype(np.uint8)
     return res_img
 
@@ -123,13 +123,15 @@ def get_lines(annotations, border_box, target_w: int, target_h: int):
     return lines
 
 
-def img_split(img,
+def img_split(
+        img,
         annotations,
         part_name: str,
         parts_h=2, parts_w=2,
         output_dir='',
         images_dir='images',
-        label_dir='labels'):
+        label_dir='labels'
+):
     images_dir = os.path.join(output_dir, images_dir)
     label_dir = os.path.join(output_dir, label_dir)
     os.makedirs(label_dir, exist_ok=True)
@@ -150,9 +152,11 @@ def img_split(img,
                 image_name = f"{os.path.splitext(part_name)[0]}.jpg"
             else:
                 image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
-            cv2.imwrite(os.path.join(images_dir, image_name),
+            cv2.imwrite(
+                os.path.join(images_dir, image_name),
                 img[border_box[1]: border_box[3], border_box[0]: border_box[2]],
-                [cv2.IMWRITE_JPEG_QUALITY, 75])
+                [cv2.IMWRITE_JPEG_QUALITY, 75]
+            )
 
             if new_annotations == []:
                 continue
@@ -174,7 +178,7 @@ def get_args():
     return parser.parse_args()
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     args = get_args()
     label = args.label
     if args.path.endswith(".tif") or args.path.endswith(".tiff"):
