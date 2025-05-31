@@ -124,13 +124,13 @@ def get_lines(annotations, border_box, target_w: int, target_h: int):
 
 
 def img_split(
-        img,
-        annotations,
-        part_name: str,
-        parts_h=2, parts_w=2,
-        output_dir='',
-        images_dir='images',
-        label_dir='labels'
+    img,
+    annotations,
+    part_name: str,
+    parts_h=2, parts_w=2,
+    output_dir='',
+    images_dir='images',
+    label_dir='labels'
 ):
     images_dir = os.path.join(output_dir, images_dir)
     label_dir = os.path.join(output_dir, label_dir)
