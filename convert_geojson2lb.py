@@ -133,7 +133,10 @@ if __name__ == '__main__':
                                 clipped_gdf.loc[i, 'geometry'] = g
                                 add_polygon = True
                             else:
-                                clipped_gdf = pd.concat([clipped_gdf, gpd.GeoDataFrame([clipped_gdf.iloc[i]], crs=crs)], ignore_index=True)
+                                clipped_gdf = pd.concat(
+                                    [clipped_gdf, gpd.GeoDataFrame([clipped_gdf.iloc[i]], crs=crs)],
+                                    ignore_index=True
+                                )
                                 clipped_gdf.loc[len(clipped_gdf), 'geometry'] = g
 
             if len(clipped_gdf) == 0:
@@ -147,7 +150,7 @@ if __name__ == '__main__':
             if args.save_geojson:
                 if gdf_crs != crs:
                     clipped_gdf = clipped_gdf.to_crs(gdf_crs)
-                head, tail =  os.path.split(file)
+                head, tail = os.path.split(file)
                 to_folder = head + '/' + folder
                 os.makedirs(to_folder, exist_ok=True)
                 file = to_folder + '/' + tail
@@ -159,7 +162,7 @@ if __name__ == '__main__':
         jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
         if not os.path.exists(jpg_file):
             cv2.imwrite(jpg_file, cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE))
-        image_root_url= '/data/local-files/?d=' + args.default_image_root_url
+        image_root_url = '/data/local-files/?d=' + args.default_image_root_url
         image_root_url += "" if image_root_url.endswith("/") else "/"
 
         head, _ = os.path.splitext(jpg_file)
