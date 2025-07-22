@@ -24,7 +24,7 @@ def get_args():
     return parser.parse_args()
 
 
-def get_label_id(label):
+def get_label_id(label: str):
     for i, x in label2id.items():
         if i in label:
             return x
