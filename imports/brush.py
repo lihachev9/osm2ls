@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 
 
-### Brush Export ###
+# Brush Export ###
 
 
 class InputStream:
@@ -14,7 +14,7 @@ class InputStream:
         self.i = 0
 
     def read(self, size):
-        out = self.data[self.i : self.i + size]
+        out = self.data[self.i: self.i + size]
         self.i += size
         return int(out, 2)
 
@@ -90,7 +90,7 @@ def decode_from_annotation(results):
     return layers
 
 
-### Brush Import ###
+# Brush Import ###
 
 
 def bits2byte(arr_str, n=8):
@@ -104,7 +104,7 @@ def bits2byte(arr_str, n=8):
     :type rle: list
     """
     rle = []
-    numbers = [arr_str[i : i + n] for i in range(0, len(arr_str), n)]
+    numbers = [arr_str[i: i + n] for i in range(0, len(arr_str), n)]
     for i in numbers:
         rle.append(int(i, 2))
     return rle
