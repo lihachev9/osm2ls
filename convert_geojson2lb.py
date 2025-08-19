@@ -4,13 +4,13 @@ import json
 import argparse
 import rasterio
 import numpy as np
-import pandas as pd
 from glob import glob
 import geopandas as gpd
-from shapely.geometry import Polygon, GeometryCollection, MultiPolygon
+from shapely.geometry import Polygon, LineString
 from rasterio.transform import AffineTransformer
 from imports.brush import mask2annotation
 from imports.utils import new_task
+from rotate_convert import start_points
 
 
 def get_args():
@@ -21,6 +21,8 @@ def get_args():
     parser.add_argument('--out_type', type=str, default='annotations')
     parser.add_argument("--save_geojson", action='store_true')
     parser.add_argument("--save_png", action='store_true')
+    parser.add_argument("--parts_w", type=int, default=1)
+    parser.add_argument("--parts_h", type=int, default=1)
     return parser.parse_args()
 
 
@@ -30,9 +32,9 @@ def get_label_id(label: str):
             return x
 
 
-def get_coords(poly: Polygon, transformer: AffineTransformer):
+def get_coords(coords, transformer: AffineTransformer):
     new_coords = []
-    for x, y in poly.exterior.coords[:-1]:
+    for x, y in coords:
         y, x = transformer.rowcol(x, y)
         new_coords.append([x, y])
     return np.array(new_coords, np.int32)
@@ -57,6 +59,8 @@ def delete_labels(labels):
 
 if __name__ == '__main__':
     args = get_args()
+    parts_w = args.parts_w
+    parts_h = args.parts_h
     label2id = {
         'tree_row': 0,
         'tree_group': 0,
@@ -69,6 +73,7 @@ if __name__ == '__main__':
         'Луг, поле': 2,
         'natural_gully': 2,
         'Поле': 2,
+        'canal': 10,
         'water': 3,
         'Вода': 3,
         'building': 4,
@@ -81,7 +86,15 @@ if __name__ == '__main__':
         'сельхоз': 7,
         'сельскохозяйственные': 7,
         'территория фермы': 7,
-        'Заболоченный луг': 8
+        'Заболоченный луг': 8,
+        'river': 9,
+        'highway': 11,
+        'intermediate': 11,
+        'ridge': 12,
+        'power_line': 13,
+        'bridge': 14,
+        'bay': 15,
+        'railway': 16
     }
     id2label = {
         0: 'Лес',
@@ -92,7 +105,15 @@ if __name__ == '__main__':
         5: 'вырубка',
         6: 'заболоченный',
         7: "сельскохозяйственные",
-        8: "Заболоченный луг"
+        8: "Заболоченный луг",
+        9: "Река",
+        10: "Канал",
+        11: "Дорога",
+        12: "Хребет",
+        13: "Линия электропередачи",
+        14: "Мост",
+        15: "Залив",
+        16: "Железная дорога"
     }
     geojson = glob(args.label + '/*.geojson')
 
@@ -103,41 +124,26 @@ if __name__ == '__main__':
             continue
 
         with rasterio.open(tiff_path) as src:
-            img = src.read(4)
+            img = src.read(1)
             crs = src.crs
             transformer = AffineTransformer(src.transform)
 
         h, w = img.shape
-        _, thresh = cv2.threshold(img, 127, 255, 0)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnt = max(contours, key=lambda x: cv2.contourArea(x))
+        # _, thresh = cv2.threshold(img, 127, 255, 0)
+        # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # cnt = max(contours, key=lambda x: cv2.contourArea(x))
+        cnt = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
         new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
         tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
-        labels = np.zeros((9, h, w), dtype=np.uint8)
+        labels = np.zeros((len(id2label), h, w), dtype=np.uint8)
 
         for file in geojson:
             gdf = gpd.read_file(file)
             gdf_crs = gdf.crs
             if gdf.crs != crs:
                 gdf = gdf.to_crs(crs)
-            clipped_gdf = gpd.clip(gdf, tiff_gdf)
-            clipped_gdf = clipped_gdf.reset_index(drop=True)
-            for i in clipped_gdf.index:
-                geom = clipped_gdf.loc[i, 'geometry']
-                if isinstance(geom, GeometryCollection) or isinstance(geom, MultiPolygon):
-                    add_polygon = False
-                    for g in geom.geoms:
-                        if isinstance(g, Polygon):
-                            if not add_polygon:
-                                clipped_gdf.loc[i, 'geometry'] = g
-                                add_polygon = True
-                            else:
-                                clipped_gdf = pd.concat(
-                                    [clipped_gdf, gpd.GeoDataFrame([clipped_gdf.iloc[i]], crs=crs)],
-                                    ignore_index=True
-                                )
-                                clipped_gdf.loc[len(clipped_gdf), 'geometry'] = g
+            clipped_gdf = gpd.clip(gdf, tiff_gdf).explode(ignore_index=True)
 
             if len(clipped_gdf) == 0:
                 continue
@@ -145,7 +151,11 @@ if __name__ == '__main__':
             label_id = get_label_id(file)
             for geom in clipped_gdf.geometry:
                 if isinstance(geom, Polygon):
-                    cv2.fillPoly(labels[label_id], [get_coords(geom, transformer)], (255))
+                    coords = geom.exterior.coords[:-1]
+                    cv2.fillPoly(labels[label_id], [get_coords(coords, transformer)], (255))
+                elif isinstance(geom, LineString):
+                    coords = geom.coords
+                    cv2.polylines(labels[label_id], [get_coords(coords, transformer)], False, (255), 10)
 
             if args.save_geojson:
                 if gdf_crs != crs:
@@ -159,30 +169,47 @@ if __name__ == '__main__':
 
         delete_labels(labels)
 
-        jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
-        if not os.path.exists(jpg_file):
-            cv2.imwrite(jpg_file, cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE))
-        image_root_url = '/data/local-files/?d=' + args.default_image_root_url
-        image_root_url += "" if image_root_url.endswith("/") else "/"
+        target_w = int(w / parts_w + w % parts_w)
+        target_h = int(h / parts_h + h % parts_h)
+        X_points = start_points(w, target_w)
+        Y_points = start_points(h, target_h)
+        img = cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE)
 
-        head, _ = os.path.splitext(jpg_file)
-        jpg_file = os.path.basename(jpg_file)
-        task = new_task(args.out_type, image_root_url, jpg_file)
-        for i, mask in enumerate(labels):
-            if set(np.unique(mask)) == {0}:
-                continue
-            name = id2label[i]
-            if args.save_png:
-                os.makedirs(head + '_label_png', exist_ok=True)
-                cv2.imwrite(head + '_label_png/' + name + '.png', mask)
-            annotation = mask2annotation(
-                mask=mask,
-                label_name=name,
-                from_name='tag',
-                to_name='image'
-            )
-            task[args.out_type][0]['result'].append(annotation)
+        for left in X_points:
+            for top in Y_points:
+                if len(X_points) == 1 and len(Y_points) == 1:
+                    jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
+                else:
+                    jpg_file = os.path.splitext(tiff_path)[0] + f'_{left}_{top}.jpg'
+                    json_path = os.path.splitext(jpg_file)[0] + '.json'
+                if not os.path.exists(jpg_file):
+                    cv2.imwrite(
+                        filename=jpg_file,
+                        img=img[top:top + target_h, left:left + target_w],
+                        params=[cv2.IMWRITE_JPEG_QUALITY, 75]
+                    )
+                image_root_url = '/data/local-files/?d=' + args.default_image_root_url
+                image_root_url += "" if image_root_url.endswith("/") else "/"
 
-        tasks = [task]
-        with open(json_path, "w") as f:
-            json.dump(tasks, f)
+                head, _ = os.path.splitext(jpg_file)
+                jpg_file = os.path.basename(jpg_file)
+                task = new_task(args.out_type, image_root_url, jpg_file)
+                for i, mask in enumerate(labels):
+                    mask = mask[top:top + target_h, left:left + target_w]
+                    if set(np.unique(mask)) == {0}:
+                        continue
+                    name = id2label[i]
+                    if args.save_png:
+                        os.makedirs(head + '_label_png', exist_ok=True)
+                        cv2.imwrite(head + '_label_png/' + name + '.png', mask)
+                    annotation = mask2annotation(
+                        mask=mask,
+                        label_name=name,
+                        from_name='tag',
+                        to_name='image'
+                    )
+                    task[args.out_type][0]['result'].append(annotation)
+
+                tasks = [task]
+                with open(json_path, "w") as f:
+                    json.dump(tasks, f)
