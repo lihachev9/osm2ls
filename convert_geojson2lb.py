@@ -61,6 +61,7 @@ if __name__ == '__main__':
     args = get_args()
     parts_w = args.parts_w
     parts_h = args.parts_h
+    reize = parts_w != 1 or parts_h != 1
     label2id = {
         'tree_row': 0,
         'tree_group': 0,
@@ -129,10 +130,9 @@ if __name__ == '__main__':
             transformer = AffineTransformer(src.transform)
 
         h, w = img.shape
-        # _, thresh = cv2.threshold(img, 127, 255, 0)
-        # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        # cnt = max(contours, key=lambda x: cv2.contourArea(x))
-        cnt = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
+        contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnt = max(contours, key=lambda x: cv2.contourArea(x))
+        # cnt = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
         new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
         tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
@@ -174,12 +174,11 @@ if __name__ == '__main__':
         X_points = start_points(w, target_w)
         Y_points = start_points(h, target_h)
         img = cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE)
+        jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
 
         for left in X_points:
             for top in Y_points:
-                if len(X_points) == 1 and len(Y_points) == 1:
-                    jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
-                else:
+                if reize:
                     jpg_file = os.path.splitext(tiff_path)[0] + f'_{left}_{top}.jpg'
                     json_path = os.path.splitext(jpg_file)[0] + '.json'
                 if not os.path.exists(jpg_file):
@@ -192,8 +191,7 @@ if __name__ == '__main__':
                 image_root_url += "" if image_root_url.endswith("/") else "/"
 
                 head, _ = os.path.splitext(jpg_file)
-                jpg_file = os.path.basename(jpg_file)
-                task = new_task(args.out_type, image_root_url, jpg_file)
+                task = new_task(args.out_type, image_root_url, os.path.basename(jpg_file))
                 for i, mask in enumerate(labels):
                     mask = mask[top:top + target_h, left:left + target_w]
                     if set(np.unique(mask)) == {0}:
