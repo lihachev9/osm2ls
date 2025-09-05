@@ -1,12 +1,15 @@
 import os
 import cv2
+import csv
 import json
 import argparse
 import rasterio
 import numpy as np
 from glob import glob
+from PIL import Image
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString
+from shapely.errors import GEOSException
 from rasterio.transform import AffineTransformer
 from imports.brush import mask2annotation
 from imports.utils import new_task
@@ -26,7 +29,7 @@ def get_args():
     return parser.parse_args()
 
 
-def get_label_id(label: str):
+def get_label_id(label2id, label: str):
     for i, x in label2id.items():
         if i in label:
             return x
@@ -57,65 +60,37 @@ def delete_labels(labels):
     labels[7] = cv2.bitwise_and(cv2.bitwise_not(labels[2]), labels[7])
 
 
+def get_id2label(data):
+    id2label1 = dict()
+    count = 0
+    idkeys = set()
+    for x in data:
+        t = x[1]
+        if t not in idkeys:
+            idkeys.add(t)
+            id2label1[count] = t
+            count += 1
+    return id2label1
+
+
+def get_label2id(data, id2label):
+    reverse_id2label = {v: k for k, v in id2label.items()}
+    label2id = dict()
+    for x in data:
+        label2id[x[0]] = reverse_id2label[x[1]]
+    return label2id
+
+
 if __name__ == '__main__':
     args = get_args()
     parts_w = args.parts_w
     parts_h = args.parts_h
     reize = parts_w != 1 or parts_h != 1
-    label2id = {
-        'tree_row': 0,
-        'tree_group': 0,
-        'wood': 0,
-        'Лес': 0,
-        'scrub': 1,
-        'кустарник': 1,
-        'heath': 2,
-        'grassland': 2,
-        'Луг, поле': 2,
-        'natural_gully': 2,
-        'Поле': 2,
-        'canal': 10,
-        'water': 3,
-        'Вода': 3,
-        'building': 4,
-        'строения': 4,
-        'landuse_forest': 5,
-        'вырубка': 5,
-        'wetland': 6,
-        'заболоченный': 6,
-        'landuse_farmland': 7,
-        'сельхоз': 7,
-        'сельскохозяйственные': 7,
-        'территория фермы': 7,
-        'Заболоченный луг': 8,
-        'river': 9,
-        'highway': 11,
-        'intermediate': 11,
-        'ridge': 12,
-        'power_line': 13,
-        'bridge': 14,
-        'bay': 15,
-        'railway': 16
-    }
-    id2label = {
-        0: 'Лес',
-        1: 'кустарник',
-        2: 'Поле',
-        3: 'Вода',
-        4: 'строения',
-        5: 'вырубка',
-        6: 'заболоченный',
-        7: "сельскохозяйственные",
-        8: "Заболоченный луг",
-        9: "Река",
-        10: "Канал",
-        11: "Дорога",
-        12: "Хребет",
-        13: "Линия электропередачи",
-        14: "Мост",
-        15: "Залив",
-        16: "Железная дорога"
-    }
+    with open("label2studio.csv") as f:
+        reader = csv.reader(f)
+        label2studio = {rows[0]: rows[1] for rows in reader}
+    id2label = get_id2label(label2studio)
+    label2id = get_label2id(label2studio, id2label)
     geojson = glob(args.label + '/*.geojson')
 
     for tiff_path in glob(args.path + '/*.tif'):
@@ -143,12 +118,21 @@ if __name__ == '__main__':
             gdf_crs = gdf.crs
             if gdf.crs != crs:
                 gdf = gdf.to_crs(crs)
-            clipped_gdf = gpd.clip(gdf, tiff_gdf).explode(ignore_index=True)
+
+            try:
+                clipped_gdf = gpd.clip(gdf, tiff_gdf).explode(ignore_index=True)
+            except GEOSException:
+                print(f'Cannot clip {file} with {tiff_path}')
+                continue
 
             if len(clipped_gdf) == 0:
                 continue
 
-            label_id = get_label_id(file)
+            label_id = get_label_id(label2id, file)
+            if label_id is None:
+                print(f'Unknown label: {file}')
+                continue
+
             for geom in clipped_gdf.geometry:
                 if isinstance(geom, Polygon):
                     coords = geom.exterior.coords[:-1]
@@ -173,7 +157,6 @@ if __name__ == '__main__':
         target_h = int(h / parts_h + h % parts_h)
         X_points = start_points(w, target_w)
         Y_points = start_points(h, target_h)
-        img = cv2.imread(tiff_path, cv2.IMREAD_GRAYSCALE)
         jpg_file = os.path.splitext(tiff_path)[0] + '.jpg'
 
         for left in X_points:
@@ -182,11 +165,7 @@ if __name__ == '__main__':
                     jpg_file = os.path.splitext(tiff_path)[0] + f'_{left}_{top}.jpg'
                     json_path = os.path.splitext(jpg_file)[0] + '.json'
                 if not os.path.exists(jpg_file):
-                    cv2.imwrite(
-                        filename=jpg_file,
-                        img=img[top:top + target_h, left:left + target_w],
-                        params=[cv2.IMWRITE_JPEG_QUALITY, 75]
-                    )
+                    Image.fromarray(img[top:top + target_h, left:left + target_w]).save(jpg_file)
                 image_root_url = '/data/local-files/?d=' + args.default_image_root_url
                 image_root_url += "" if image_root_url.endswith("/") else "/"
 

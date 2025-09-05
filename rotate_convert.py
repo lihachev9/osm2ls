@@ -2,6 +2,7 @@ import argparse
 import os
 import cv2
 import numpy as np
+from PIL import Image
 import rasterio as rs
 import geopandas as gpd
 from rasterio.transform import AffineTransformer
@@ -130,7 +131,8 @@ def img_split(
     parts_h=2, parts_w=2,
     output_dir='',
     images_dir='images',
-    label_dir='labels'
+    label_dir='labels',
+    ext='jpg',
 ):
     images_dir = os.path.join(output_dir, images_dir)
     label_dir = os.path.join(output_dir, label_dir)
@@ -149,19 +151,17 @@ def img_split(
             new_annotations = get_lines(annotations, border_box, target_w, target_h)
 
             if len(X_points) == 1 and len(Y_points) == 1:
-                image_name = f"{os.path.splitext(part_name)[0]}.jpg"
+                image_name = f"{os.path.splitext(part_name)[0]}.{ext}"
             else:
-                image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.jpg"
-            cv2.imwrite(
-                os.path.join(images_dir, image_name),
-                img[border_box[1]: border_box[3], border_box[0]: border_box[2]],
-                [cv2.IMWRITE_JPEG_QUALITY, 75]
+                image_name = f"{os.path.splitext(part_name)[0]}_{left}_{top}.{ext}"
+            Image.fromarray(img[border_box[1]: border_box[3], border_box[0]: border_box[2]]).save(
+                os.path.join(images_dir, image_name)
             )
 
             if new_annotations == []:
                 continue
             # Сохранение новых аннотаций
-            annotation_name = image_name.replace(".jpg", ".txt")
+            annotation_name = image_name.replace(f".{ext}", ".txt")
             with open(os.path.join(label_dir, annotation_name), 'w') as f:
                 f.writelines(new_annotations)
 
@@ -171,10 +171,11 @@ def get_args():
     parser.add_argument('-p', "--path", type=str, required=True)
     parser.add_argument('-l', "--label", type=str)
     parser.add_argument('-o', "--output", type=str, default="")
-    parser.add_argument('--affine_transform', action='store_false')
-    parser.add_argument("--accumulate_cut", action="store_false")
-    parser.add_argument("--parts_w", type=int, default=2)
-    parser.add_argument("--parts_h", type=int, default=2)
+    parser.add_argument('-e', "--extension", type=str, default="jpg", choices=["jpg", "jpeg", "png"])
+    parser.add_argument('--affine_transform', action='store_true')
+    parser.add_argument("--accumulate_cut", action="store_true")
+    parser.add_argument("--parts_w", type=int, default=1)
+    parser.add_argument("--parts_h", type=int, default=1)
     return parser.parse_args()
 
 
@@ -183,17 +184,18 @@ if __name__ == '__main__':
     label = args.label
     if args.path.endswith(".tif") or args.path.endswith(".tiff"):
         with rs.open(args.path) as src:
-            crs = src.crs
-            img = src.read([3, 2, 1])
-            img = np.transpose(img, (1, 2, 0))
-            transformer = AffineTransformer(src.transform)
+            meta = src.meta
+            if meta['count'] == 1:
+                img = np.squeeze(src.read())
+            else:
+                img = src.read([3, 2, 1])
+                img = np.transpose(img, (1, 2, 0))
+            img[np.isnan(img)] = 0
+            if label:
+                crs = src.crs
+                transformer = AffineTransformer(src.transform)
     else:
         img = cv2.imread(args.path, cv2.IMREAD_GRAYSCALE)
-
-    if label:
-        gdf = gpd.read_file(label)
-        if gdf.crs != crs:
-            gdf = gdf.to_crs(crs)
 
     if args.affine_transform:
         p = find_all_p(img)
@@ -223,6 +225,10 @@ if __name__ == '__main__':
 
     annotations = []
     if label:
+        gdf = gpd.read_file(label)
+        if gdf.crs != crs:
+            gdf = gdf.to_crs(crs)
         annotations = get_annotations(gdf.geometry, transformer, affine)
 
-    img_split(img, annotations, args.path, args.parts_w, args.parts_h, args.output)
+    img_split(img, annotations, args.path, args.parts_w,
+              args.parts_h, args.output, args.extension)
