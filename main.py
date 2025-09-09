@@ -1,5 +1,11 @@
 import argparse
+from converter import Converter, convert_parser
 from imports import yolo as import_yolo, coco as import_coco, segm as import_segm
+
+
+def exports(args):
+    converter = Converter()
+    converter.convert(args.input, args.output, args.format)
 
 
 def imports(args):
@@ -41,6 +47,13 @@ def get_all_args():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     subparsers.required = False
 
+    # Export
+    parser_export = subparsers.add_parser(
+        "export",
+        help="Converter from Label Studio JSON annotations to external formats",
+    )
+    convert_parser(parser_export)
+
     # Import
     parser_import = subparsers.add_parser(
         "import",
@@ -56,4 +69,9 @@ def get_all_args():
 
 if __name__ == "__main__":
     args = get_all_args()
-    imports(args)
+    if args.command == "export":
+        exports(args)
+    elif args.command == "import":
+        imports(args)
+    else:
+        print("Please, specify command: 'export' or 'import'")

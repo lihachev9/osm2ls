@@ -1,3 +1,13 @@
+ivalid_characters = "\\/:*?\"<>|"
+
+
+def sanitize_filename(filename):
+    for char in ivalid_characters:
+        if char in filename:
+            filename = filename.replace(char, '')
+    return filename
+
+
 def get_json_root_type(filename):
     char = "x"
     with open(filename, "r", encoding="utf-8") as f:

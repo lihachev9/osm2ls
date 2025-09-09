@@ -2,36 +2,19 @@ import io
 import logging
 import os
 from enum import Enum
-from collections import defaultdict
-from copy import deepcopy
 
 import ijson
 import ujson as json
+from brush import convert_task
 from utils import get_json_root_type
-from brush import convert_task_dir
+from imports.utils import ExpandFullPath
 
 
 logger = logging.getLogger(__name__)
 
 
 class Format(Enum):
-    JSON = 1
-    JSON_MIN = 2
-    CSV = 3
-    TSV = 4
-    CONLL2003 = 5
-    COCO = 6
-    VOC = 7
-    BRUSH_TO_NUMPY = 8
-    BRUSH_TO_PNG = 9
-    ASR_MANIFEST = 10
-    YOLO = 11
-    YOLO_OBB = 12
-    CSV_OLD = 13
-    YOLO_WITH_IMAGES = 14
-    COCO_WITH_IMAGES = 15
-    YOLO_OBB_WITH_IMAGES = 16
-    BRUSH_TO_COCO = 17
+    PNG = 9
 
     def __str__(self):
         return self.name
@@ -46,27 +29,23 @@ class Format(Enum):
 
 class Converter():
     _FORMAT_INFO = {
-        Format.BRUSH_TO_NUMPY: {
-            "title": "Brush labels to NumPy",
-            "description": "Export your brush labels as NumPy 2d arrays. Each label outputs as one image.",
-            "tags": ["image segmentation"],
-        },
-        Format.BRUSH_TO_PNG: {
+        Format.PNG: {
             "title": "Brush labels to PNG",
             "description": "Export your brush labels as PNG images. Each label outputs as one image.",
             "tags": ["image segmentation"],
         },
     }
 
-    def convert(self, input_data, output_data, format):
+    def convert(self, input_data: str, output_data: str, format: str):
         if isinstance(format, str):
             format = Format.from_string(format)
 
-        if format == Format.BRUSH_TO_NUMPY:
+        if format == Format.PNG:
             items = self.iter_from_json_file(input_data)
             basename = os.path.splitext(os.path.basename(input_data))[0]
             output_data = os.path.join(output_data, basename)
-            convert_task_dir(items, output_data, out_format="numpy")
+            os.makedirs(output_data, exist_ok=True)
+            convert_task(items, output_data, out_format="png")
 
     def iter_from_json_file(self, json_file):
         """Extract annotation results from json file
@@ -85,10 +64,7 @@ class Converter():
         # many tasks
         elif data_type == "list":
             with io.open(json_file, "rb") as f:
-                data = ijson.items(
-                    f, "item", use_float=True
-                )  # 'item' means to read array of dicts
-                for task in data:
+                for task in ijson.items(f, "item", use_float=True):
                     for item in self.annotation_result_from_task(task):
                         if item is not None:
                             yield item
@@ -109,8 +85,7 @@ class Converter():
 
         # return task with empty annotations
         if not annotations:
-            data = Converter.get_data(task, {}, {})
-            yield data
+            yield []
 
         # skip cancelled annotations
         cancelled = lambda x: not (
@@ -120,37 +95,33 @@ class Converter():
         if not annotations:
             return None
 
-        # sort by creation time
-        annotations = sorted(
-            annotations, key=lambda x: x.get("created_at", 0), reverse=True
-        )
-
         for annotation in annotations:
-            result = annotation["result"]
-            outputs = defaultdict(list)
+            yield annotation["result"]
 
-            # get results only as output
-            for r in result:
-                if "from_name" in r and (
-                    tag_name := self._maybe_matching_tag_from_schema(r["from_name"])
-                ):
-                    v = deepcopy(r["value"])
-                    v["type"] = self._schema[tag_name]["type"]
-                    if "original_width" in r:
-                        v["original_width"] = r["original_width"]
-                    if "original_height" in r:
-                        v["original_height"] = r["original_height"]
-                    outputs[r["from_name"]].append(v)
 
-            data = Converter.get_data(task, outputs)
-            if "agreement" in task:
-                data["agreement"] = task["agreement"]
-            yield data
-
-    @staticmethod
-    def get_data(task, outputs):
-        return {
-            "id": task["id"],
-            "input": task["data"],
-            "output": outputs or {}
-        }
+def convert_parser(parser):
+    parser.add_argument(
+        "-i",
+        "--input",
+        dest="input",
+        help="JSON file with annotations",
+        required=True,
+        action=ExpandFullPath,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        help="Output file or directory (will be created if not exists)",
+        default=os.path.join(os.path.dirname(__file__), "output"),
+        action=ExpandFullPath,
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        dest="format",
+        metavar="FORMAT",
+        type=Format.from_string,
+        default=Format.PNG,
+        help="Converter format",
+    )

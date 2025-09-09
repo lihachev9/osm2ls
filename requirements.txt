@@ -2,3 +2,5 @@ imagesize
 rasterio
 geopandas
 opencv-python
+ijson
+ujson

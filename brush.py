@@ -5,6 +5,8 @@ import numpy as np
 
 from PIL import Image
 
+from utils import sanitize_filename
+
 
 # Brush Export ###
 
@@ -93,11 +95,12 @@ def decode_from_annotation(results):
 
 def save_brush_images_from_annotation(
     results,
-    out_dir,
-    out_format,
+    out_dir: str,
+    out_format: str,
 ):
     layers = decode_from_annotation(results)
     for label, layer in layers.items():
+        label = sanitize_filename(label)
         filename = os.path.join(out_dir, label)
         if out_format == "png":
             im = Image.fromarray(layer)
@@ -108,18 +111,12 @@ def save_brush_images_from_annotation(
 
 def convert_task(item, out_dir, out_format):
     """Task with multiple annotations to brush images, out_format = numpy | png"""
-    for results in item["output"].items():
+    for results in item:
         save_brush_images_from_annotation(
             results,
             out_dir,
             out_format,
         )
-
-
-def convert_task_dir(items, out_dir, out_format):
-    """Directory with tasks and annotation to brush images, out_format = numpy | png"""
-    for item in items:
-        convert_task(item, out_dir, out_format)
 
 
 # Brush Import ###
