@@ -1,3 +1,4 @@
+import os
 import cv2
 import uuid
 import numpy as np
@@ -88,6 +89,37 @@ def decode_from_annotation(results):
         else:
             layers[label] = cv2.add(layers[label], np.reshape(image, [height, width, 4])[:, :, 3])
     return layers
+
+
+def save_brush_images_from_annotation(
+    results,
+    out_dir,
+    out_format,
+):
+    layers = decode_from_annotation(results)
+    for label, layer in layers.items():
+        filename = os.path.join(out_dir, label)
+        if out_format == "png":
+            im = Image.fromarray(layer)
+            im.save(filename + ".png")
+        else:
+            raise Exception("Unknown output format for brush converter")
+
+
+def convert_task(item, out_dir, out_format):
+    """Task with multiple annotations to brush images, out_format = numpy | png"""
+    for results in item["output"].items():
+        save_brush_images_from_annotation(
+            results,
+            out_dir,
+            out_format,
+        )
+
+
+def convert_task_dir(items, out_dir, out_format):
+    """Directory with tasks and annotation to brush images, out_format = numpy | png"""
+    for item in items:
+        convert_task(item, out_dir, out_format)
 
 
 # Brush Import ###

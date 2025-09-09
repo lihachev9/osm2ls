@@ -11,7 +11,7 @@ import geopandas as gpd
 from shapely.geometry import Polygon, LineString
 from shapely.errors import GEOSException
 from rasterio.transform import AffineTransformer
-from imports.brush import mask2annotation
+from brush import mask2annotation
 from imports.utils import new_task
 from rotate_convert import start_points
 

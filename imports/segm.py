@@ -1,7 +1,7 @@
 import os
 import json
 
-from imports.brush import image2annotation
+from brush import image2annotation
 from imports.utils import defautl_parser, new_task, default_image_root_url, logger
 
 
