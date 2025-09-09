@@ -1,7 +1,6 @@
 import io
 import logging
 import os
-from enum import Enum
 
 import ijson
 import ujson as json
@@ -13,39 +12,13 @@ from imports.utils import ExpandFullPath
 logger = logging.getLogger(__name__)
 
 
-class Format(Enum):
-    PNG = 9
-
-    def __str__(self):
-        return self.name
-
-    @classmethod
-    def from_string(cls, s):
-        try:
-            return Format[s]
-        except KeyError:
-            raise ValueError()
-
-
 class Converter():
-    _FORMAT_INFO = {
-        Format.PNG: {
-            "title": "Brush labels to PNG",
-            "description": "Export your brush labels as PNG images. Each label outputs as one image.",
-            "tags": ["image segmentation"],
-        },
-    }
-
     def convert(self, input_data: str, output_data: str, format: str):
-        if isinstance(format, str):
-            format = Format.from_string(format)
-
-        if format == Format.PNG:
-            items = self.iter_from_json_file(input_data)
-            basename = os.path.splitext(os.path.basename(input_data))[0]
-            output_data = os.path.join(output_data, basename)
-            os.makedirs(output_data, exist_ok=True)
-            convert_task(items, output_data, out_format="png")
+        items = self.iter_from_json_file(input_data)
+        basename = os.path.splitext(os.path.basename(input_data))[0]
+        output_data = os.path.join(output_data, basename)
+        os.makedirs(output_data, exist_ok=True)
+        convert_task(items, output_data, out_format=format)
 
     def iter_from_json_file(self, json_file):
         """Extract annotation results from json file
@@ -121,7 +94,8 @@ def convert_parser(parser):
         "--format",
         dest="format",
         metavar="FORMAT",
-        type=Format.from_string,
-        default=Format.PNG,
+        type=str,
+        default="png",
+        choices=["png", "numpy"],
         help="Converter format",
     )

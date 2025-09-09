@@ -102,14 +102,16 @@ def save_brush_images_from_annotation(
     for label, layer in layers.items():
         label = sanitize_filename(label)
         filename = os.path.join(out_dir, label)
-        if out_format == "png":
+        if out_format == "numpy":
+            np.save(filename, layer)
+        elif out_format == "png":
             im = Image.fromarray(layer)
             im.save(filename + ".png")
         else:
             raise Exception("Unknown output format for brush converter")
 
 
-def convert_task(item, out_dir, out_format):
+def convert_task(item, out_dir: str, out_format: str):
     """Task with multiple annotations to brush images, out_format = numpy | png"""
     for results in item:
         save_brush_images_from_annotation(
