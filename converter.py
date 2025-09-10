@@ -14,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 class Converter():
     def convert(self, input_data: str, output_data: str, format: str):
+        if os.path.isdir(input_data):
+            for json_file in self.iter_from_dir(input_data):
+                self.convert_file(json_file, output_data, format)
+        else:
+            self.convert_file(input_data, output_data, format)
+
+    def convert_file(self, input_data: str, output_data: str, format: str):
         items = self.iter_from_json_file(input_data)
         basename = os.path.splitext(os.path.basename(input_data))[0]
         output_data = os.path.join(output_data, basename)
@@ -41,6 +48,13 @@ class Converter():
                     for item in self.annotation_result_from_task(task):
                         if item is not None:
                             yield item
+
+    def iter_from_dir(self, input_dir):
+        for json_file in os.listdir(input_dir):
+            if json_file[-5:] != ".json":
+                continue
+            json_file = os.path.join(input_dir, json_file)
+            yield json_file
 
     def annotation_result_from_task(self, task):
         has_annotations = "completions" in task or "annotations" in task

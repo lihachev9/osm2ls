@@ -115,9 +115,7 @@ def convert_task(item, out_dir: str, out_format: str):
     """Task with multiple annotations to brush images, out_format = numpy | png"""
     for results in item:
         save_brush_images_from_annotation(
-            results,
-            out_dir,
-            out_format,
+            results, out_dir, out_format,
         )
 
 
