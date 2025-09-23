@@ -7,16 +7,22 @@ from imports.label_config import generate_label_config
 from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
 
 
-def convert_rectanglelabels(values, label, img_w, img_h):
+def convert_rectanglelabels(values, label: str, img_w: int, img_h: int):
     (x1, y1), (x2, y2), (x3, y3), (x4, y4) = \
         [(float(values[i]) * img_w, float(values[i + 1]) * img_h)
          for i in range(1, len(values), 2)]
+
+    # Calculate the center of the rectangle
     center_x = (x1 + x2 + x3 + x4) / 4
     center_y = (y1 + y2 + y3 + y4) / 4
+
+    # Calculate the width and height
     width = distance(x1, y1, x2, y2)
     height = distance(x1, y1, x4, y4)
     if width == 0 or height == 0:
         return
+
+    # Calculate the rotation angle
     dx = x2 - x1
     dy = y2 - y1
     rotation = math.degrees(math.atan2(dy, dx))
@@ -28,24 +34,24 @@ def convert_rectanglelabels(values, label, img_w, img_h):
     top_left_x = center_x - width_2 * cos + height_2 * sin
     top_left_y = center_y - width_2 * sin - height_2 * cos
 
+    # Normalize the values
     x = (top_left_x / img_w) * 100
     y = (top_left_y / img_h) * 100
     width = (width / img_w) * 100
     height = (height / img_h) * 100
 
+    # Create the dictionary for Label Studio
     return {
         "x": x,
         "y": y,
         "width": width,
         "height": height,
         "rotation": rotation,
-        "rectanglelabels": [label],
+        "rectanglelabels": [label]
     }
 
 
-def convert_polygonlabels(
-    values, label, img_w=None, img_h=None
-):
+def convert_polygonlabels(values, label: str, img_w=None, img_h=None):
     points = [(float(values[i]) * 100, float(values[i + 1]) * 100)
               for i in range(1, len(values), 2)]
 
@@ -53,8 +59,8 @@ def convert_polygonlabels(
 
 
 def convert_yolo_to_ls(
-    input_dir,
-    out_file,
+    input_dir: str,
+    out_file: str,
     to_name="image",
     from_name="label",
     out_type="annotations",
