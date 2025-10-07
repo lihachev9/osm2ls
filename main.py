@@ -31,7 +31,7 @@ def imports(args):
         )
     elif args.import_format == "segm":
         import_segm.convert_segm_to_ls(
-            input_file=args.input,
+            input_dir=args.input,
             out_file=args.output,
             to_name=args.to_name,
             from_name=args.from_name,
