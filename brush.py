@@ -268,26 +268,6 @@ def encode_rle(arr, wordsize=8, rle_sizes=[3, 4, 8, 16]):
     return rle
 
 
-def contour2rle(contours, contour_id, img_width, img_height):
-    """
-    :param contours:  list of contours
-    :type contours: list
-    :param contour_id: id of contour which you want to translate
-    :type contour_id: int
-    :param img_width: image shape width
-    :type img_width: int
-    :param img_height: image shape height
-    :type img_height: int
-    :return: list of ints in RLE format
-    """
-    mask_im = np.zeros((img_width, img_height, 4))
-    mask_contours = cv2.drawContours(
-        mask_im, contours, contour_id, color=(0, 255, 0, 100), thickness=-1
-    )
-    rle_out = encode_rle(mask_contours.ravel().astype(int))
-    return rle_out
-
-
 def mask2rle(mask):
     """Convert mask to RLE
 
