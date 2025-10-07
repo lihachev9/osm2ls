@@ -2,6 +2,7 @@ import os
 import json
 
 from brush import image2annotation
+from imports.label_config import generate_label_config
 from imports.utils import defautl_parser, new_task, default_image_root_url, logger
 
 
@@ -36,6 +37,7 @@ def convert_segm_to_ls(
     # build array out of provided comma separated image_extns (str -> array)
     image_ext = [x.strip() for x in image_ext.split(",")]
     logger.info(f"image extensions->, {image_ext}")
+    categories = set()
 
     # loop through images
     for f in os.listdir(images_dir):
@@ -55,6 +57,7 @@ def convert_segm_to_ls(
         label_dir = os.path.join(labels_dir, image_file_base)
         for i in os.listdir(label_dir):
             label_name = os.path.splitext(i)[0]
+            categories.add(label_name)
             annotation = image2annotation(
                 path=label_dir + "/" + i,
                 label_name=label_name,
@@ -63,6 +66,17 @@ def convert_segm_to_ls(
             )
             task[out_type][0]['result'].append(annotation)
         tasks.append(task)
+
+    # generate and save labeling config
+    categories = dict(enumerate(sorted(categories)))
+    label_config_file = out_file.replace('.json', '') + '.label_config.xml'
+    generate_label_config(
+        categories,
+        {from_name: "brushlabels"},
+        to_name,
+        from_name,
+        label_config_file,
+    )
 
     if len(tasks) > 0:
         logger.info("Saving Label Studio JSON to %s", out_file)
