@@ -75,10 +75,9 @@ class Converter():
             yield []
 
         # skip cancelled annotations
-        cancelled = lambda x: not (
+        annotations = list(filter(lambda x: not (
             x.get("skipped", False) or x.get("was_cancelled", False)
-        )
-        annotations = list(filter(cancelled, annotations))
+        ), annotations))
         if not annotations:
             return None
 
