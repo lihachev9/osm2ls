@@ -4,7 +4,11 @@ import json  # better to use "imports ujson as json" for the best performance
 import uuid
 import imagesize
 from imports.label_config import generate_label_config
-from imports.utils import defautl_parser, distance, new_task, default_image_root_url, logger
+from imports.utils import defautl_parser, new_task, default_image_root_url, logger
+
+
+def distance(x1: float, y1: float, x2: float, y2: float) -> float:
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
 def convert_rectanglelabels(values, label: str, img_w: int, img_h: int):
