@@ -2,9 +2,7 @@ import argparse
 import os
 import logging
 
-from urllib.request import (
-    pathname2url,
-)  # for converting "+","*", etc. in file paths to appropriate urls
+from urllib.request import pathname2url
 
 
 logging.basicConfig(level=logging.INFO)
@@ -21,12 +19,7 @@ def new_task(out_type: str, root_url: str, file_name: str):
     return {
         "data": {"image": os.path.join(root_url, pathname2url(file_name))},
         # 'annotations' or 'predictions'
-        out_type: [
-            {
-                "result": [],
-                "ground_truth": False,
-            }
-        ],
+        out_type: [{"result": [], "ground_truth": False}],
     }
 
 
