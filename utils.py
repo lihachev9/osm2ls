@@ -1,14 +1,14 @@
 ivalid_characters = "\\/:*?\"<>|"
 
 
-def sanitize_filename(filename):
+def sanitize_filename(filename: str) -> str:
     for char in ivalid_characters:
         if char in filename:
             filename = filename.replace(char, '')
     return filename
 
 
-def get_json_root_type(filename):
+def get_json_root_type(filename: str) -> str:
     char = "x"
     with open(filename, "r", encoding="utf-8") as f:
         # Read the file character by character
