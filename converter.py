@@ -1,4 +1,3 @@
-import io
 import logging
 import os
 
@@ -43,7 +42,7 @@ class Converter():
 
         # many tasks
         elif data_type == "list":
-            with io.open(json_file, "rb") as f:
+            with open(json_file, "rb") as f:
                 for task in ijson.items(f, "item", use_float=True):
                     for item in self.annotation_result_from_task(task):
                         if item is not None:
