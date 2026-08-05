@@ -42,7 +42,7 @@ class ImageRectifier:
         """
         rows, cols = src.shape
         # Создаем координатную сетку
-        points = np.mgrid[0:np.uint16(cols), 0:np.uint16(rows)].reshape((2, rows*cols))
+        points = np.mgrid[0:np.uint16(cols), 0:np.uint16(rows)].reshape((2, rows * cols))
 
         # Применяем преобразование
         transformed_points = self.a.dot(points).round().astype('int32')
