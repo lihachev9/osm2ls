@@ -29,10 +29,17 @@ def get_args():
     return parser.parse_args()
 
 
-def get_label_id(label2id, label: str):
+def get_label_id(label2id: dict, label: str) -> int:
+    max_l = 0
     for i, x in label2id.items():
         if i in label:
-            return x
+            len_i = len(i)
+            if len_i > max_l:
+                max_l = len_i
+                max_x = x
+    if max_l == 0:
+        return -1
+    return max_x
 
 
 def get_coords(coords, transformer: AffineTransformer):
@@ -123,11 +130,17 @@ if __name__ == '__main__':
         new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
         tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
-        labels = np.zeros((len(id2label), h, w), dtype=np.uint8)
+
+        existing_labels = set()
+        valid_geojson = list()
 
         for file in geojson:
+            label_id = get_label_id(label2id, file)
+            if label_id == -1:
+                print(f'Unknown label: {file}')
+                continue
+
             gdf = gpd.read_file(file)
-            gdf_crs = gdf.crs
             if gdf.crs != crs:
                 gdf = gdf.to_crs(crs)
 
@@ -137,14 +150,24 @@ if __name__ == '__main__':
                 print(f'Cannot clip {file} with {tiff_path}')
                 continue
 
-            if len(clipped_gdf) == 0:
-                continue
+            if "geometry" in gdf.columns:
+                for geom in gdf.geometry:
+                    if isinstance(geom, Polygon) or isinstance(geom, LineString):
+                        existing_labels.add(label_id)
+                        valid_geojson.append((file, label_id, gdf))
+                        break
 
-            label_id = get_label_id(label2id, file)
-            if label_id is None:
-                print(f'Unknown label: {file}')
-                continue
+        label2studio_new = []
+        for j in range(len(label2studio)):
+            key, value = label2studio[j]
+            if label2id[key] in existing_labels:
+                label2studio_new.append(label2studio[j])
 
+        id2label = get_id2label(label2studio_new)
+        label2id = get_label2id(label2studio_new, id2label)
+        labels = np.zeros((len(id2label), h, w), dtype=np.uint8)
+
+        for j, (file, label_id, gdf) in enumerate(valid_geojson):
             for geom in clipped_gdf.geometry:
                 if isinstance(geom, Polygon):
                     coords = geom.exterior.coords[:-1]
@@ -154,8 +177,6 @@ if __name__ == '__main__':
                     cv2.polylines(labels[label_id], [get_coords(coords, transformer)], False, (255), 10)
 
             if args.save_geojson:
-                if gdf_crs != crs:
-                    clipped_gdf = clipped_gdf.to_crs(gdf_crs)
                 head, tail = os.path.split(file)
                 to_folder = head + '/' + folder
                 os.makedirs(to_folder, exist_ok=True)
