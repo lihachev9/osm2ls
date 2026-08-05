@@ -3,6 +3,7 @@ import os
 
 import ijson
 import ujson as json
+from glob import iglob
 from brush import convert_task
 from utils import get_json_root_type
 from imports.utils import ExpandFullPath
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Converter():
     def convert(self, input_data: str, output_data: str, format: str):
         if os.path.isdir(input_data):
-            for json_file in self.iter_from_dir(input_data):
+            for json_file in iglob(input_data + "/*.json"):
                 self.convert_file(json_file, output_data, format)
         else:
             self.convert_file(input_data, output_data, format)
@@ -47,13 +48,6 @@ class Converter():
                     for item in self.annotation_result_from_task(task):
                         if item is not None:
                             yield item
-
-    def iter_from_dir(self, input_dir):
-        for json_file in os.listdir(input_dir):
-            if json_file[-5:] != ".json":
-                continue
-            json_file = os.path.join(input_dir, json_file)
-            yield json_file
 
     def annotation_result_from_task(self, task):
         has_annotations = "completions" in task or "annotations" in task
