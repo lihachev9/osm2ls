@@ -43,21 +43,18 @@ def get_coords(coords, transformer: AffineTransformer):
     return np.array(new_coords, np.int32)
 
 
-def delete_labels(labels):
-    # Удалить из поля леса
-    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[0]), labels[2])
-    # Удалить из поля кустарники
-    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[1]), labels[2])
-    # Удалить из поля строения
-    labels[2] = cv2.bitwise_and(cv2.bitwise_not(labels[4]), labels[2])
-    # Удалить из леса вырубку
-    labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[5]), labels[0])
-    # Удалить из леса заболоченные
-    labels[0] = cv2.bitwise_and(cv2.bitwise_not(labels[6]), labels[0])
-    # Удалить из заболоченного воду
-    labels[6] = cv2.bitwise_and(cv2.bitwise_not(labels[3]), labels[6])
-    # Удалить Поле из с/х
-    labels[7] = cv2.bitwise_and(cv2.bitwise_not(labels[2]), labels[7])
+def delete_labels(labels, id2label: dict, delete_label: dict):
+    label2id = {v: k for k, v in id2label.items()}
+    for k, v_set in delete_label.items():
+        if k not in label2id:
+            print(f"{k} нет на изображение, поэтому пропускаем удаление для него")
+            continue
+        bitwise = cv2.bitwise_not(labels[label2id[k]])
+        for v in v_set:
+            if v not in label2id:
+                print(f"{v} нет на изображение, поэтому пропускаем удаление из него")
+                continue
+            labels[label2id[v]] = cv2.bitwise_and(bitwise, labels[label2id[v]])
 
 
 def get_id2label(data):
@@ -81,6 +78,20 @@ def get_label2id(data, id2label):
     return label2id
 
 
+def get_delete_label() -> dict:
+    delete_label = {}
+    with open("label2studio.csv") as f:
+        reader = csv.reader(f)
+        for rows in reader:
+            if len(rows) != 2:
+                continue
+            k, v = rows
+            if k not in delete_label:
+                delete_label[k] = set()
+            delete_label[k].add(v)
+    return delete_label
+
+
 if __name__ == '__main__':
     args = get_args()
     parts_w = args.parts_w
@@ -89,6 +100,7 @@ if __name__ == '__main__':
     with open("label2studio.csv") as f:
         reader = csv.reader(f)
         label2studio = {rows[0]: rows[1] for rows in reader}
+    delete_label = get_delete_label()
     id2label = get_id2label(label2studio)
     label2id = get_label2id(label2studio, id2label)
     geojson = glob(args.label + '/*.geojson')
@@ -151,7 +163,7 @@ if __name__ == '__main__':
                 print(file)
                 clipped_gdf.to_file(file, driver='GeoJSON')
 
-        delete_labels(labels)
+        delete_labels(labels, id2label, delete_label)
 
         target_w = int(w / parts_w + w % parts_w)
         target_h = int(h / parts_h + h % parts_h)

@@ -40,7 +40,7 @@ def find_all_p(img: np.ndarray):
 
 def accumulate_cut(img: np.ndarray, min_percent=2, max_percent=98) -> np.ndarray:
     lo, hi = np.percentile(img, (min_percent, max_percent))
-    res_img = (img.astype(float) - lo) / (hi-lo)
+    res_img = (img.astype(float) - lo) / (hi - lo)
 
     # Multiply by 255, clamp range to [0, 255] and convert to uint8
     res_img = np.clip(res_img * 255, 0, 255).astype(np.uint8)
