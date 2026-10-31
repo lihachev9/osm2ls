@@ -1,33 +1,112 @@
-tree_row,Лес
-tree_group,Лес
-wood,Лес
-Лес,Лес
-scrub,кустарник
-кустарник,кустарник
-heath,Поле
-grassland,Поле
-"Луг, поле",Поле
-natural_gully,Поле
-Поле,Поле
-canal,Канал
-water,Вода
-Вода,Вода
-building,строения
-строения,строения
-landuse_forest,вырубка
-вырубка,вырубка
-wetland,заболоченный
-заболоченный,заболоченный
-landuse_farmland,сельскохозяйственные
-сельхоз,сельскохозяйственные
-сельскохозяйственные,сельскохозяйственные
-территория фермы,сельскохозяйственные
-Заболоченный луг,Заболоченный луг
-river,Река
-highway,Дорога
-intermediate,Дорога
-ridge,Хребет
-power_line,Линия электропередачи
-bridge,Мост
-bay,Залив
-railway,Железная дорога
+aeroway_aerodrome,аэродром
+aeroway_helipad,вертолётная площадка
+aeroway_runway,взлётно-посадочная полоса (ВПП)
+agricultural_yes,сельхозтехника
+amenity_fuel,АЗС
+amenity_parking,парковка
+barrier_ditch,ров
+barrier_fence,забор
+barrier_wall,стена
+bridge_ruins,разрушенный мост
+bridge_yes,мост
+building_cowshed,коровник
+building_house,строения
+building_military,блиндаж
+building_ruin,разрушенные строения
+building_ruins,разрушенные строения
+building_shed,строения
+building_yes,строения
+burned_yes,сожженный лес
+car_yes,техника
+concrete covering_ruins,старое бетонное покрытие
+control and trace strip_yes,контрольно-следовая полоса
+dragon's teeth_yes,надолб
+ford_yes,брод
+highway_bus_stop,автобусная остановка
+highway_primary,дорога
+highway_residential,дорога
+highway_secondary,дорога
+highway_service,дорога
+highway_tertiary,дорога
+highway_track,"полевая, лесная, сельская дорога"
+highway_unclassified,дорога
+highway=street_lamp,мачта с лампами для освещения дороги
+historic_memorial,мемориал
+irrigation_pivot,системы кругового орошения
+landuse_allotments,садоводческое хозяйство
+landuse_basin,"отстойник, очистные сооружения"
+landuse_cemetery,кладбище
+landuse_clearing,поляна в лесу
+landuse_commercial,промышленная зона
+landuse_farmland,сельхозполя
+landuse_farmyard,территория фермы без полей
+landuse_forest,лес
+landuse_industrial,промышленная зона
+landuse_landfill,свалка
+landuse_logging,вырубка
+landuse_meadow,луг
+landuse_orchard,плодовый сад
+landuse_plant_nursery,питомник растений
+landuse_quarry,карьер
+landuse_residential,жилая территория
+loading_dock,погрузочные доки у строений
+man_made = mast,столбы с указателем или камерой
+man_made_bridge,мост
+man_made_chimney,дымовая или вентиляционная труба
+man_made_communications_tower,вышка
+man_made_cutline,просека
+man_made_embankment,насыпь
+man_made_pier,причал
+man_made_pipeline_chamber,камера с вентилем
+man_made_silo,силосная башня
+man_made_stockpile,запас природного сырья
+man_made_storage_tank,емкость для хранения жидкостей или сжатых газов
+man_made_tower,вышка
+man_made_unknown,неизвестный объект
+man_made_water_tower,водонапорная башня
+military_base,военная база
+military_bomb_crater,воронка от снаряда
+military_bunker,блиндаж
+military_trench,окоп
+natural_earth_bank,овраг
+natural_grass,луг
+natural_grassland,луг
+natural_ridge,хребет
+natural_scrub,кустарник
+natural_tree_group,группа деревьев
+natural_tree_row,ряд деревьев
+natural_trees,одно дерево
+natural_valley,долина
+natural_water,вода
+natural_wetland,болото
+natural_wood,лес
+pipe_yes,трубы (трубопровода)
+place_islet,остров
+place_village,деревня
+power_line,линия электропередачи
+power_minor_line,линия электропередачи
+power_pole,опоры ЛЭП
+power_substation,подстанция
+power_tower,опоры ЛЭП
+power_transformer,трансформаторная будка
+railway embankment_yes,"железнодорожная насыпь, полотно"
+railway_level_crossing,железнодорожный переезд
+railway_rail,железная дорога
+service_train_yard,"путь то,погрузки-разгрузки поезда"
+structure_floating,пантон
+surface_asphalt,заасфальтированная площадь
+surface_unpaved,грунтовое покрытие
+technique_industrial,технические строения(установки) в ПЗ
+technique_yes,техника
+the object is only in the photo_yes,объект только на снимке
+trench for technique_yes,окоп для техники
+water_reservoir,резервуар для воды
+waterway_canal,канал
+waterway_dam,"плотина, дамба"
+waterway_dam,"плотина, дамба"
+waterway_drain,дренажный канал
+waterway_river,река
+waterway_stream,ручей
+waterway_technique,техника на воде
+wetland_reedbed,камыши
+wetland_wet_meadow,заболоченный луг
