@@ -5,7 +5,7 @@ from imports import yolo as import_yolo, coco as import_coco, segm as import_seg
 
 def exports(args):
     converter = Converter()
-    converter.convert(args.input, args.output, args.format)
+    converter.convert(args.input, args.output, args.format, args.tiff)
 
 
 def imports(args):

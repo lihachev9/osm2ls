@@ -4,3 +4,4 @@ geopandas
 opencv-python
 ijson
 ujson
+Pillow

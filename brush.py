@@ -1,10 +1,13 @@
 import os
 import cv2
 import uuid
+import rasterio
 import numpy as np
+import geopandas as gpd
 
 from PIL import Image
 
+from geojson_from_annotation import table_geojson_from_annotation
 from utils import sanitize_filename
 
 
@@ -85,11 +88,11 @@ def decode_from_annotation(results):
         labels = result['value'][key] if key in result['value'] else ['no_label']
         label = '-'.join(labels)
 
-        image = decode_rle(rle)
+        image = np.reshape(decode_rle(rle), [height, width, 4])[:, :, 3]
         if label not in layers:
-            layers[label] = np.reshape(image, [height, width, 4])[:, :, 3]
+            layers[label] = image
         else:
-            layers[label] = cv2.add(layers[label], np.reshape(image, [height, width, 4])[:, :, 3])
+            layers[label] = cv2.add(layers[label], image)
     return layers
 
 
@@ -97,7 +100,14 @@ def save_brush_images_from_annotation(
     results,
     out_dir: str,
     out_format: str,
+    crs=None,
+    transformer=None
 ):
+    if out_format == "tiff":
+        if crs is None:
+            raise Exception("crs is required for tiff output format")
+        if transformer is None:
+            raise Exception("transformer is required for tiff output format")
     layers = decode_from_annotation(results)
     for label, layer in layers.items():
         label = sanitize_filename(label)
@@ -107,16 +117,44 @@ def save_brush_images_from_annotation(
         elif out_format == "png":
             im = Image.fromarray(layer)
             im.save(filename + ".png")
+        elif out_format == "tiff":
+            with rasterio.open(
+                filename + ".tiff", "w", driver="GTiff",
+                height=layer.shape[0], width=layer.shape[1],
+                count=1, dtype=layer.dtype, crs=crs, compress="deflate",
+                transform=transformer._transformer, nodata=0
+            ) as dst:
+                dst.write(layer, 1)
         else:
             raise Exception("Unknown output format for brush converter")
 
 
-def convert_task(item, out_dir: str, out_format: str):
-    """Task with multiple annotations to brush images, out_format = numpy | png"""
+def save_geojson_from_annotation(results, filename, crs, transformer):
+    layers = decode_from_annotation(results)
+    table = []
+    labels = set()
+    for label, layer in layers.items():
+        label = sanitize_filename(label)
+        table.extend(table_geojson_from_annotation(layer, label, transformer))
+        labels.add(label)
+    gdf = gpd.GeoDataFrame(table, crs=crs)
+    gdf.to_file(filename + ".geojson", driver="GeoJSON")
+    # writeQML(labels, filename)
+
+
+def convert_task(item, out_dir: str, out_format: str, crs=None, transformer=None):
+    """Task with multiple annotations to brush images, out_format = numpy | png | geojson"""
     for results in item:
-        save_brush_images_from_annotation(
-            results, out_dir, out_format,
-        )
+        if out_format == "geojson":
+            if crs is None:
+                raise Exception("crs is required for geojson output format")
+            if transformer is None:
+                raise Exception("transformer is required for geojson output format")
+            save_geojson_from_annotation(results, out_dir, crs, transformer)
+        else:
+            save_brush_images_from_annotation(
+                results, out_dir, out_format, crs, transformer
+            )
 
 
 # Brush Import ###
