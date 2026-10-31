@@ -4,7 +4,7 @@ from shapely.geometry import shape
 from shapely import make_valid
 
 
-def table_geojson_from_annotation(layer: np.ndarray, label: str, transform):
+def table_from_annotation(layer: np.ndarray, label: str, transform):
     table = []
     mask = (layer > 0).astype(np.uint8)
     shapes = rasterio.features.shapes(

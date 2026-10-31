@@ -7,7 +7,7 @@ import geopandas as gpd
 
 from PIL import Image
 
-from geojson_from_annotation import table_geojson_from_annotation
+from geojson_from_annotation import table_from_annotation
 from utils import sanitize_filename
 
 
@@ -135,7 +135,7 @@ def save_geojson_from_annotation(results, filename, crs, transform):
     labels = set()
     for label, layer in layers.items():
         label = sanitize_filename(label)
-        table.extend(table_geojson_from_annotation(layer, label, transform))
+        table.extend(table_from_annotation(layer, label, transform))
         labels.add(label)
     gdf = gpd.GeoDataFrame(table, crs=crs)
     gdf.to_file(filename + ".geojson", driver="GeoJSON")
