@@ -1,7 +1,7 @@
 imagesize
 rasterio
 geopandas
-opencv-python
+opencv-python-headless
 ijson
 ujson
 Pillow
