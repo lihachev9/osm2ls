@@ -4,11 +4,11 @@ from shapely.geometry import shape
 from shapely import make_valid
 
 
-def table_geojson_from_annotation(layer: np.ndarray, label: str, transformer):
+def table_geojson_from_annotation(layer: np.ndarray, label: str, transform):
     table = []
     mask = (layer > 0).astype(np.uint8)
     shapes = rasterio.features.shapes(
-        mask, mask=mask, transform=transformer._transformer
+        mask, mask=mask, transform=transform
     )
     for geom, _ in shapes:
         p = shape(geom)

@@ -8,7 +8,6 @@ from glob import iglob
 from brush import convert_task
 from utils import get_json_root_type
 from imports.utils import ExpandFullPath
-from rasterio.transform import AffineTransformer
 
 
 logger = logging.getLogger(__name__)
@@ -17,23 +16,23 @@ logger = logging.getLogger(__name__)
 class Converter():
     def convert(self, input_data: str, output_data: str, format: str, tiff: str = ""):
         crs = None
-        transformer = None
+        transform = None
         if tiff != "":
             with rasterio.open(tiff) as src:
                 crs = src.crs
-                transformer = AffineTransformer(src.transform)
+                transform = src.transform
         if os.path.isdir(input_data):
             for json_file in iglob(input_data + "/*.json"):
-                self.convert_file(json_file, output_data, format, crs, transformer)
+                self.convert_file(json_file, output_data, format, crs, transform)
         else:
-            self.convert_file(input_data, output_data, format, crs, transformer)
+            self.convert_file(input_data, output_data, format, crs, transform)
 
-    def convert_file(self, input_data: str, output_data: str, format: str, crs=None, transformer=None):
+    def convert_file(self, input_data: str, output_data: str, format: str, crs=None, transform=None):
         items = self.iter_from_json_file(input_data)
         basename = os.path.splitext(os.path.basename(input_data))[0]
         output_data = os.path.join(output_data, basename)
         os.makedirs(output_data, exist_ok=True)
-        convert_task(items, output_data, out_format=format, crs=crs, transformer=transformer)
+        convert_task(items, output_data, out_format=format, crs=crs, transform=transform)
 
     def iter_from_json_file(self, json_file):
         """Extract annotation results from json file

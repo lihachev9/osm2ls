@@ -101,12 +101,12 @@ def save_brush_images_from_annotation(
     out_dir: str,
     out_format: str,
     crs=None,
-    transformer=None
+    transform=None
 ):
     if out_format == "tiff":
         if crs is None:
             raise Exception("crs is required for tiff output format")
-        if transformer is None:
+        if transform is None:
             raise Exception("transformer is required for tiff output format")
     layers = decode_from_annotation(results)
     for label, layer in layers.items():
@@ -122,38 +122,38 @@ def save_brush_images_from_annotation(
                 filename + ".tiff", "w", driver="GTiff",
                 height=layer.shape[0], width=layer.shape[1],
                 count=1, dtype=layer.dtype, crs=crs, compress="deflate",
-                transform=transformer._transformer, nodata=0
+                transform=transform, nodata=0
             ) as dst:
                 dst.write(layer, 1)
         else:
             raise Exception("Unknown output format for brush converter")
 
 
-def save_geojson_from_annotation(results, filename, crs, transformer):
+def save_geojson_from_annotation(results, filename, crs, transform):
     layers = decode_from_annotation(results)
     table = []
     labels = set()
     for label, layer in layers.items():
         label = sanitize_filename(label)
-        table.extend(table_geojson_from_annotation(layer, label, transformer))
+        table.extend(table_geojson_from_annotation(layer, label, transform))
         labels.add(label)
     gdf = gpd.GeoDataFrame(table, crs=crs)
     gdf.to_file(filename + ".geojson", driver="GeoJSON")
     # writeQML(labels, filename)
 
 
-def convert_task(item, out_dir: str, out_format: str, crs=None, transformer=None):
+def convert_task(item, out_dir: str, out_format: str, crs=None, transform=None):
     """Task with multiple annotations to brush images, out_format = numpy | png | geojson"""
     for results in item:
         if out_format == "geojson":
             if crs is None:
                 raise Exception("crs is required for geojson output format")
-            if transformer is None:
-                raise Exception("transformer is required for geojson output format")
-            save_geojson_from_annotation(results, out_dir, crs, transformer)
+            if transform is None:
+                raise Exception("transform is required for geojson output format")
+            save_geojson_from_annotation(results, out_dir, crs, transform)
         else:
             save_brush_images_from_annotation(
-                results, out_dir, out_format, crs, transformer
+                results, out_dir, out_format, crs, transform
             )
 
 
