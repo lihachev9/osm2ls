@@ -170,140 +170,87 @@ def bits2byte(arr_str, n=8):
     :return rle:
     :type rle: list
     """
-    rle = []
-    numbers = [arr_str[i: i + n] for i in range(0, len(arr_str), n)]
-    for i in numbers:
-        rle.append(int(i, 2))
-    return rle
+    n_bytes = len(arr_str) // n
+    return list(int(arr_str, 2).to_bytes(n_bytes, "big"))
 
 
-# Shamelessly plagiarized from https://stackoverflow.com/a/32681075/6051733
 def base_rle_encode(inarray):
     """run length encoding. Partial credit to R rle function.
     Multi datatype arrays catered for including non Numpy
-    returns: tuple (runlengths, startpositions, values)"""
+    returns: tuple (runlengths, values)"""
     ia = np.asarray(inarray)  # force numpy
     n = len(ia)
     if n == 0:
-        return None, None, None
+        return None, None
     else:
         y = ia[1:] != ia[:-1]  # pairwise unequal (string safe)
         i = np.append(np.where(y), n - 1)  # must include last element posi
         z = np.diff(np.append(-1, i))  # run lengths
-        p = np.cumsum(np.append(0, z))[:-1]  # positions
-        return z, p, ia[i]
+        return z, ia[i]
 
 
-def encode_rle(arr, wordsize=8, rle_sizes=[3, 4, 8, 16]):
-    """Encode a 1d array to rle
+def encode_rle(arr, wordsize=8, rle_sizes=(3, 4, 8, 16)):
+    """Encode a 1d array to RLE (Label Studio / LSB-compatible)."""
+    arr = np.asarray(arr).ravel()
+    num = arr.size
 
+    # ---- заголовок ----
+    header_parts = [
+        f"{num:032b}",                    # длина массива
+        f"{wordsize - 1:05b}",            # wordsize
+    ]
+    header_parts.extend(f"{x - 1:04b}" for x in rle_sizes)
+    header = "".join(header_parts)
 
-    :param arr: flattened np.array from a 4d image (R, G, B, alpha)
-    :type arr: np.array
-    :param wordsize: wordsize bits for decoding, default is 8
-    :type wordsize: int
-    :param rle_sizes:  list of ints which state how long a series is of the same number
-    :type rle_sizes: list
-    :return rle: run length encoded array
-    :type rle: list
+    # ---- тело ----
+    lengths, values = base_rle_encode(arr)
 
-    """
-    # Set length of array in 32 bits
-    num = len(arr)
-    numbits = f"{num:032b}"
+    # Быстрый путь для одиночных значений (самый частый случай)
+    value_bits = [f"{int(v) & 0xFF:08b}" for v in values]
 
-    # put in the wordsize in bits
-    wordsizebits = f"{wordsize - 1:05b}"
+    chunks = []
 
-    # put rle sizes in the bits
-    rle_bits = "".join([f"{x - 1:04b}" for x in rle_sizes])
+    # Границы для rle_sizes = [3,4,8,16]
+    # код длины: (2 бита индекса в rle_sizes) + (rle_sizes[idx] бит значения-1)
+    # Одиночное значение кодируется как 0 + 00 + 000 + value
+    max_per_size = [1 << s for s in rle_sizes]  # 8, 16, 256, 65536
+    idx_bits = [f"{i:02b}" for i in range(len(rle_sizes))]
 
-    # combine it into base string
-    base_str = numbits + wordsizebits + rle_bits
+    for L, vb in zip(lengths.tolist(), value_bits):
+        if L == 1:
+            chunks.append("000000")
+            chunks.append(vb)
+            continue
 
-    # start with creating the rle bite string
-    out_str = ""
-    for length_reeks, p, value in zip(*base_rle_encode(arr)):
-        # TODO: A nice to have but --> this can be optimized but works
-        if length_reeks == 1:
-            # we state with the first 0 that it has a length of 1
-            out_str += "0"
-            # We state now the index on the rle sizes
-            out_str += "00"
+        # series
+        remaining = L
+        # Для очень длинных серий режем на куски по 2**16
+        big = max_per_size[-1]
+        while remaining > big:
+            chunks.append("1")
+            chunks.append(idx_bits[-1])            # "11"
+            chunks.append(f"{big - 1:016b}")
+            chunks.append(vb)
+            remaining -= big
 
-            # the rle size value is 0 for an individual number
-            out_str += "000"
+        # Выбираем минимальный подходящий rle_size
+        for idx, cap in enumerate(max_per_size):
+            if remaining <= cap:
+                chunks.append("1")
+                chunks.append(idx_bits[idx])
+                chunks.append(f"{remaining - 1:0{rle_sizes[idx]}b}")
+                chunks.append(vb)
+                break
 
-            # put the value in a 8 bit string
-            out_str += f"{value:08b}"
+    body = "".join(chunks)
 
-        elif length_reeks > 1:
-            # rle size = 3
-            if length_reeks <= 8:
-                # Starting with a 1 indicates that we have started a series
-                out_str += "1"
+    # ---- добивка до кратности 8 ----
+    total = header + body
+    pad = (-len(total)) % 8
+    if pad:
+        total += "0" * pad
 
-                # index in rle size arr
-                out_str += "00"
-
-                # length of array to bits
-                out_str += f"{length_reeks - 1:03b}"
-
-                out_str += f"{value:08b}"
-
-            # rle size = 4
-            elif 8 < length_reeks <= 16:
-                # Starting with a 1 indicates that we have started a series
-                out_str += "1"
-                out_str += "01"
-
-                # length of array to bits
-                out_str += f"{length_reeks - 1:04b}"
-
-                out_str += f"{value:08b}"
-
-            # rle size = 8
-            elif 16 < length_reeks <= 256:
-                # Starting with a 1 indicates that we have started a series
-                out_str += "1"
-
-                out_str += "10"
-
-                # length of array to bits
-                out_str += f"{length_reeks - 1:08b}"
-
-                out_str += f"{value:08b}"
-
-            # rle size = 16 or longer
-            else:
-                length_temp = length_reeks
-                while length_temp > 2**16:
-                    # Starting with a 1 indicates that we have started a series
-                    out_str += "1"
-
-                    out_str += "11"
-                    out_str += f"{2 ** 16 - 1:016b}"
-
-                    out_str += f"{value:08b}"
-                    length_temp -= 2**16
-
-                # Starting with a 1 indicates that we have started a series
-                out_str += "1"
-
-                out_str += "11"
-                # length of array to bits
-                out_str += f"{length_temp - 1:016b}"
-
-                out_str += f"{value:08b}"
-
-    # make sure that we have an 8 fold lenght otherwise add 0's at the end
-    nzfill = 8 - len(base_str + out_str) % 8
-    total_str = base_str + out_str
-    total_str = total_str + nzfill * "0"
-
-    rle = bits2byte(total_str)
-
-    return rle
+    return bits2byte(total)
 
 
 def mask2rle(mask):
