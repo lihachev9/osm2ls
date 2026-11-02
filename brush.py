@@ -129,20 +129,20 @@ def save_brush_images_from_annotation(
             raise Exception("Unknown output format for brush converter")
 
 
-def save_geojson_from_annotation(results, filename, crs, transform):
+def save_geojson_from_annotation(results, filename, crs, transform, colors):
     layers = decode_from_annotation(results)
     table = []
     labels = set()
     for label, layer in layers.items():
         label = sanitize_filename(label)
-        table.extend(table_from_annotation(layer, label, transform))
+        table.extend(table_from_annotation(layer, label, transform, colors))
         labels.add(label)
     gdf = gpd.GeoDataFrame(table, crs=crs)
     gdf.to_file(filename + ".geojson", driver="GeoJSON")
-    # writeQML(labels, filename)
+    # writeQML(labels, filename, colors)
 
 
-def convert_task(item, out_dir: str, out_format: str, crs=None, transform=None):
+def convert_task(item, out_dir: str, out_format: str, crs=None, transform=None, colors=dict):
     """Task with multiple annotations to brush images, out_format = numpy | png | geojson"""
     for results in item:
         if out_format == "geojson":
@@ -150,7 +150,7 @@ def convert_task(item, out_dir: str, out_format: str, crs=None, transform=None):
                 raise Exception("crs is required for geojson output format")
             if transform is None:
                 raise Exception("transform is required for geojson output format")
-            save_geojson_from_annotation(results, out_dir, crs, transform)
+            save_geojson_from_annotation(results, out_dir, crs, transform, colors)
         else:
             save_brush_images_from_annotation(
                 results, out_dir, out_format, crs, transform

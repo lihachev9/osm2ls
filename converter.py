@@ -1,5 +1,6 @@
 import logging
 import os
+import csv
 
 import ijson
 import rasterio
@@ -21,18 +22,27 @@ class Converter():
             with rasterio.open(tiff) as src:
                 crs = src.crs
                 transform = src.transform
+        colors = {}
+        if os.path.exists("color_labels.csv"):
+            with open("color_labels.csv") as f:
+                reader = csv.reader(f)
+                for rows in reader:
+                    if len(rows) != 2:
+                        continue
+                    colors[rows[0]] = rows[1]
         if os.path.isdir(input_data):
             for json_file in iglob(input_data + "/*.json"):
-                self.convert_file(json_file, output_data, format, crs, transform)
+                self.convert_file(json_file, output_data, format, crs, transform, colors)
         else:
-            self.convert_file(input_data, output_data, format, crs, transform)
+            self.convert_file(input_data, output_data, format, crs, transform, colors)
 
-    def convert_file(self, input_data: str, output_data: str, format: str, crs=None, transform=None):
+    def convert_file(self, input_data: str, output_data: str, format: str,
+                     crs=None, transform=None, colors=dict):
         items = self.iter_from_json_file(input_data)
         basename = os.path.splitext(os.path.basename(input_data))[0]
         output_data = os.path.join(output_data, basename)
         os.makedirs(output_data, exist_ok=True)
-        convert_task(items, output_data, out_format=format, crs=crs, transform=transform)
+        convert_task(items, output_data, format, crs, transform, colors)
 
     def iter_from_json_file(self, json_file):
         """Extract annotation results from json file
