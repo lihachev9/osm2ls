@@ -181,9 +181,10 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
+    path = args.path
     label = args.label
-    if args.path.endswith(".tif") or args.path.endswith(".tiff"):
-        with rs.open(args.path) as src:
+    if path.endswith(".tif") or path.endswith(".tiff"):
+        with rs.open(path) as src:
             meta = src.meta
             if meta['count'] == 1:
                 img = np.squeeze(src.read())
@@ -195,7 +196,7 @@ if __name__ == '__main__':
                 crs = src.crs
                 transformer = AffineTransformer(src.transform)
     else:
-        img = cv2.imread(args.path, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
     if args.affine_transform:
         p = find_all_p(img)
@@ -230,5 +231,5 @@ if __name__ == '__main__':
             gdf = gdf.to_crs(crs)
         annotations = get_annotations(gdf.geometry, transformer, affine)
 
-    img_split(img, annotations, args.path, args.parts_w,
+    img_split(img, annotations, path, args.parts_w,
               args.parts_h, args.output, args.extension)

@@ -80,8 +80,8 @@ def convert_segm_to_ls(
 
     if len(tasks) > 0:
         logger.info("Saving Label Studio JSON to %s", out_file)
-        with open(out_file, "w") as out:
-            json.dump(tasks, out)
+        with open(out_file, "w", encoding="utf-8") as out:
+            json.dump(tasks, out, ensure_ascii=False, separators=(',', ':'))
     else:
         logger.error("No labels converted")
 

@@ -8,6 +8,7 @@ import numpy as np
 from glob import glob
 from PIL import Image
 import geopandas as gpd
+from shapely import make_valid
 from shapely.geometry import Polygon, LineString
 from shapely.errors import GEOSException
 from rasterio.transform import AffineTransformer
@@ -127,8 +128,10 @@ if __name__ == '__main__':
         contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnt = max(contours, key=lambda x: cv2.contourArea(x))
         # cnt = np.array([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
-        new_p = [transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)]
-        tiff_gdf = gpd.GeoDataFrame({'geometry': [Polygon(new_p)]}, crs=crs)
+        new_p = Polygon([transformer.xy(x[1], x[0]) for x in cnt.reshape(-1, 2)])
+        if not new_p.is_valid:
+            new_p = make_valid(new_p, method='structure', keep_collapsed=False)
+        tiff_gdf = gpd.GeoDataFrame({'geometry': [new_p]}, crs=crs)
         folder = os.path.split(os.path.splitext(tiff_path)[0])[1]
 
         existing_labels = set()
@@ -220,6 +223,5 @@ if __name__ == '__main__':
                     )
                     task[args.out_type][0]['result'].append(annotation)
 
-                tasks = [task]
-                with open(json_path, "w") as f:
-                    json.dump(tasks, f)
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump([task], f, ensure_ascii=False, separators=(',', ':'))
